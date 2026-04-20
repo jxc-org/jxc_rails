@@ -1,35 +1,38 @@
-# JxcRails
+# jxc_rails
 
-TODO: Delete this and the text below, and describe your gem
+Shared Rails conventions for jxc-org applications (birthdaze, gigq, lumberlog, and future apps).
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/jxc_rails`. To experiment with that code, run `bin/console` for an interactive prompt.
+## Modules
+
+- **`JxcRails::HotwireNative`** — version-aware `path_configuration.json` for Hotwire Native clients, force-upgrade gating based on app version.
+- **`JxcRails::PersistentLogin`** — Devise `remember_me` auto-applied for Hotwire Native clients so mobile users aren't logged out after two weeks.
+- **`JxcRails::ShortCode`** — `has_short_code` DSL for nanoid-style public identifiers with configurable alphabets.
 
 ## Installation
 
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
-
-Install the gem and add to the application's Gemfile by executing:
-
-```bash
-bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```ruby
+# Gemfile
+gem "jxc_rails", github: "jxc-org/jxc_rails"
 ```
 
-If bundler is not being used to manage dependencies, install the gem by executing:
+## Configuration
 
-```bash
-gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```ruby
+# config/initializers/jxc_rails.rb
+JxcRails.configure do |c|
+  c.hotwire_native.app_name        = "Birthdaze"
+  c.hotwire_native.min_app_version = "2.0.0"
+  c.persistent_login.remember_for  = 1.year
+  c.short_code.default_length      = 8
+end
 ```
 
-## Usage
+## Status
 
-TODO: Write usage instructions here
+Scaffold only. Module implementations pending.
 
-## Development
-
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
-
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
-
-## Contributing
-
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/jxc_rails.
+| Module | Status |
+|---|---|
+| `HotwireNative` | skeleton |
+| `PersistentLogin` | skeleton |
+| `ShortCode` | skeleton |
