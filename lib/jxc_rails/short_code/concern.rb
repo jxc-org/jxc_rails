@@ -27,17 +27,25 @@ module JxcRails
 
         validates field, uniqueness: true, allow_nil: true
 
-        hook = on == :validation ? :before_validation : :before_create
-        send(hook, on: on == :validation ? :create : nil) do
-          next if self[field].present?
+        assign_block = lambda do |record|
+          next if record[field].present?
 
           loop do
             candidate = generator.call
-            unless self.class.exists?(field => candidate)
-              self[field] = candidate
+            unless record.class.unscoped.exists?(field => candidate)
+              record[field] = candidate
               break
             end
           end
+        end
+
+        case on
+        when :validation
+          before_validation(on: :create) { assign_block.call(self) }
+        when :create
+          before_create { assign_block.call(self) }
+        else
+          raise ArgumentError, "has_short_code on: must be :create or :validation (got #{on.inspect})"
         end
 
         define_method(:to_param) { self[field] } if to_param
