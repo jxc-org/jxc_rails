@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 require "active_support"
-require "active_support/core_ext/module/attribute_accessors"
+require "active_support/core_ext/integer/time"
+require "active_support/core_ext/numeric/time"
+require "active_support/core_ext/object/blank"
 
 require_relative "jxc_rails/version"
 require_relative "jxc_rails/configuration"

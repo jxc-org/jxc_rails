@@ -29,11 +29,32 @@ module JxcRails
         parse_user_agent(request.user_agent.to_s)
       end
 
+      # Browser/WebKit tokens we never want to interpret as the app identifier.
+      UA_IGNORED_NAMES = %w[
+        Mozilla AppleWebKit Safari Chrome Firefox Gecko KHTML Version Edg
+        CriOS FxiOS EdgiOS OPR Opera Mobile Turbo\ Native\ iOS Hotwire\ Native\ iOS
+      ].freeze
+
       def self.parse_user_agent(ua)
         return nil if ua.blank?
 
-        # Matches e.g. "Birthdaze/2.1.0 (build 42)" or "Birthdaze/2.1.0" anywhere in the UA
-        match = ua.match(%r{(?<name>[A-Za-z][\w.\-]*)/(?<version>\d+(?:\.\d+){0,3})(?:\s*\(build\s+(?<build>\d+)\))?})
+        # Prefer a token with a (build N) suffix; otherwise the first non-browser token.
+        pattern = %r{(?<name>[A-Za-z][\w.\-]*)/(?<version>\d+(?:\.\d+){0,3})(?:\s*\(build\s+(?<build>\d+)\))?}
+        with_build = nil
+        without_build = nil
+
+        ua.scan(pattern) do
+          match = Regexp.last_match
+          next if UA_IGNORED_NAMES.include?(match[:name])
+
+          if match[:build]
+            with_build ||= match
+          else
+            without_build ||= match
+          end
+        end
+
+        match = with_build || without_build
         return nil unless match
 
         new(app_name: match[:name], version: match[:version], build: match[:build])
