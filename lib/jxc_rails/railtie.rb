@@ -18,6 +18,13 @@ module JxcRails
       end
     end
 
+    initializer "jxc_rails.posthog.view_helper" do
+      ActiveSupport.on_load(:action_view) do
+        require "jxc_rails/posthog/helper"
+        include JxcRails::Posthog::Helper
+      end
+    end
+
     initializer "jxc_rails.persistent_login.view_helper" do
       ActiveSupport.on_load(:action_view) do
         require "jxc_rails/persistent_login/view_helper"
