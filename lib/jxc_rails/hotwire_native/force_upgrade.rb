@@ -26,17 +26,39 @@ module JxcRails
       private
 
       def redirect_if_app_version_below_minimum
-        min = JxcRails.configuration.hotwire_native.min_app_version
-        return if min.blank?
-
         upgrade_path = JxcRails.configuration.hotwire_native.force_upgrade_path
         return if request.path == upgrade_path
         return if request.format.json?
 
-        client = ClientVersion.from_request(request)
-        return unless client&.below?(min)
+        reason = if force_upgrade_via_feature_flag?
+                   "feature_flag"
+                 elsif force_upgrade_via_min_version?
+                   "min_version"
+                 end
+        return unless reason
 
+        client = ClientVersion.from_request(request)
+        JxcRails::FeatureFlags.track("force_upgrade_shown",
+          current_user,
+          reason: reason,
+          app_version: client&.version
+        )
         redirect_to upgrade_path, allow_other_host: false
+      end
+
+      def force_upgrade_via_min_version?
+        min = JxcRails.configuration.hotwire_native.min_app_version
+        return false if min.blank?
+
+        client = ClientVersion.from_request(request)
+        client&.below?(min)
+      end
+
+      def force_upgrade_via_feature_flag?
+        return false unless turbo_native_app?
+        return false unless respond_to?(:current_user, true) && current_user
+
+        JxcRails::FeatureFlags.enabled?("force-upgrade-test", current_user)
       end
     end
   end
