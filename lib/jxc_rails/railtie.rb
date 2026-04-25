@@ -18,6 +18,12 @@ module JxcRails
       end
     end
 
+    initializer "jxc_rails.feature_flags" do
+      ActiveSupport.on_load(:action_controller_base) do
+        include JxcRails::FeatureFlags::ControllerConcern
+      end
+    end
+
     initializer "jxc_rails.posthog.view_helper" do
       ActiveSupport.on_load(:action_view) do
         require "jxc_rails/posthog/helper"
