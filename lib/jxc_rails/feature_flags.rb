@@ -28,6 +28,10 @@ module JxcRails
         overrides[flag] = value
       end
 
+      def reload!
+        client&.reload_feature_flags
+      end
+
       def clear_overrides!
         @overrides = {}
       end
