@@ -25,9 +25,11 @@ RSpec.describe JxcRails::Posthog::Helper do
       expect(html).to include("<script>")
     end
 
-    it "returns an empty string when not native" do
+    it "registers app_source as 'web' when not native" do
       view.native = false
-      expect(view.posthog_native_register_tags).to eq("")
+      html = view.posthog_native_register_tags
+      expect(html).to include("app_source: 'web'")
+      expect(html).not_to include("ios_webview")
     end
   end
 end

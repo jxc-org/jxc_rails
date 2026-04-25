@@ -4,9 +4,8 @@ module JxcRails
   module Posthog
     module Helper
       def posthog_native_register_tags
-        return "".html_safe unless turbo_native_app?
-
-        content_tag(:script, "if (window.posthog) posthog.register({app_source: 'ios_webview'});".html_safe)
+        source = turbo_native_app? ? "ios_webview" : "web"
+        content_tag(:script, "if (window.posthog) posthog.register({app_source: '#{source}'});".html_safe)
       end
     end
   end
