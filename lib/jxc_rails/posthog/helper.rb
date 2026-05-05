@@ -24,7 +24,7 @@ module JxcRails
 
         key_json = JxcRails::Posthog::Helper.script_safe_json(api_key)
         opts_json = JxcRails::Posthog::Helper.script_safe_json(init_options)
-        script = +"#{LOADER_JS}posthog.init(#{key_json}, #{opts_json});"
+        script = "#{LOADER_JS}posthog.init(#{key_json}, #{opts_json});"
         content_tag(:script, script.html_safe)
       end
 

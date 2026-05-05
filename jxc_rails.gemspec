@@ -9,7 +9,8 @@ Gem::Specification.new do |spec|
   spec.email = ["johnxcoulter@gmail.com"]
 
   spec.summary = "Shared Rails conventions for jxc-org apps."
-  spec.description = "Hotwire Native version gating, persistent login, short-code IDs, and other shared Rails patterns used across jxc-org applications."
+  spec.description = "Hotwire Native version gating, persistent login, short-code IDs, and other shared Rails patterns " \
+                     "used across jxc-org applications."
   spec.homepage = "https://github.com/jxc-org/jxc_rails"
   spec.required_ruby_version = ">= 3.2.0"
   spec.metadata["allowed_push_host"] = "https://rubygems.pkg.github.com/jxc-org"
@@ -26,6 +27,6 @@ Gem::Specification.new do |spec|
   end
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "railties", ">= 7.1"
   spec.add_dependency "activesupport", ">= 7.1"
+  spec.add_dependency "railties", ">= 7.1"
 end

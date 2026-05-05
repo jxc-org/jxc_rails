@@ -17,7 +17,7 @@ module JxcRails
       @configuration ||= Configuration.new
     end
 
-    alias_method :config, :configuration
+    alias config configuration
 
     def configure
       yield configuration

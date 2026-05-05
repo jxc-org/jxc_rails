@@ -9,6 +9,7 @@ RSpec.describe JxcRails::Posthog::Helper do
     Class.new do
       include ActionView::Helpers::TagHelper
       include JxcRails::Posthog::Helper
+
       attr_accessor :output_buffer, :native
 
       def turbo_native_app? = native

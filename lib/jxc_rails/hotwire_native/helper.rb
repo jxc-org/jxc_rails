@@ -37,12 +37,14 @@ module JxcRails
       # Without `min`/`max`, always yields.
       def for_version(min: nil, max: nil)
         return yield if @hotwire_client.nil?
+
         yield if @hotwire_client.in_range?(min: min, max: max)
       end
 
       # Yield only when the current client is a Hotwire Native client at or above `min`.
       def only_native_at_least(min)
         return if @hotwire_client.nil?
+
         yield if @hotwire_client.at_least?(min)
       end
     end

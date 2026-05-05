@@ -64,8 +64,8 @@ module JxcRails
 
       private
 
-      def feature_enabled?(flag, actor = current_user, **opts)
-        JxcRails::FeatureFlags.enabled?(flag, actor, **opts)
+      def feature_enabled?(flag, actor = current_user, **)
+        JxcRails::FeatureFlags.enabled?(flag, actor, **)
       end
     end
   end

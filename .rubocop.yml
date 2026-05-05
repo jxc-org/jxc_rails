@@ -1,8 +1,47 @@
 AllCops:
   TargetRubyVersion: 3.2
+  NewCops: enable
+  SuggestExtensions: false
 
 Style/StringLiterals:
   EnforcedStyle: double_quotes
 
 Style/StringLiteralsInInterpolation:
   EnforcedStyle: double_quotes
+
+Style/Documentation:
+  Enabled: false
+
+Naming/PredicatePrefix:
+  Enabled: false
+
+Metrics/BlockLength:
+  Exclude:
+    - spec/**/*
+
+Naming/MethodParameterName:
+  MinNameLength: 2
+  AllowedNames:
+    - ua
+    - h
+    - k
+    - on
+
+Layout/LineLength:
+  Max: 140
+
+Metrics/AbcSize:
+  Max: 25
+Metrics/MethodLength:
+  Max: 25
+Metrics/CyclomaticComplexity:
+  Max: 10
+Metrics/PerceivedComplexity:
+  Max: 10
+Metrics/ParameterLists:
+  Max: 6
+
+# OpenStruct is fine in test stubs.
+Style/OpenStructUse:
+  Exclude:
+    - spec/**/*

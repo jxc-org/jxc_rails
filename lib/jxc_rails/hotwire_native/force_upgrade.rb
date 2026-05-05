@@ -39,10 +39,9 @@ module JxcRails
 
         client = ClientVersion.from_request(request)
         JxcRails::FeatureFlags.track("force_upgrade_shown",
-          current_user,
-          reason: reason,
-          app_version: client&.version
-        )
+                                     current_user,
+                                     reason: reason,
+                                     app_version: client&.version)
         redirect_to upgrade_path, allow_other_host: false
       end
 

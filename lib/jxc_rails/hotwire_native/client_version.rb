@@ -31,15 +31,15 @@ module JxcRails
 
       # Browser/WebKit tokens we never want to interpret as the app identifier.
       UA_IGNORED_NAMES = %w[
-        Mozilla AppleWebKit Safari Chrome Firefox Gecko KHTML Version Edg
-        CriOS FxiOS EdgiOS OPR Opera Mobile Turbo\ Native\ iOS Hotwire\ Native\ iOS
-      ].freeze
+        Mozilla AppleWebKit Safari Chrome Firefox Gecko KHTML Version
+        Edg CriOS FxiOS EdgiOS OPR Opera Mobile
+      ].push("Turbo Native iOS", "Hotwire Native iOS").freeze
 
       def self.parse_user_agent(ua)
         return nil if ua.blank?
 
         # Prefer a token with a (build N) suffix; otherwise the first non-browser token.
-        pattern = %r{(?<name>[A-Za-z][\w.\-]*)/(?<version>\d+(?:\.\d+){0,3})(?:\s*\(build\s+(?<build>\d+)\))?}
+        pattern = %r{(?<name>[A-Za-z][\w.-]*)/(?<version>\d+(?:\.\d+){0,3})(?:\s*\(build\s+(?<build>\d+)\))?}
         with_build = nil
         without_build = nil
 

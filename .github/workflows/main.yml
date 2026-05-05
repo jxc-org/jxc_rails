@@ -3,13 +3,13 @@ name: Ruby
 on:
   push:
     branches:
-      - master
+      - main
 
   pull_request:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: homeserver-linux
     name: Ruby ${{ matrix.ruby }}
     strategy:
       matrix:

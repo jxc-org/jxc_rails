@@ -3,9 +3,9 @@
 module JxcRails
   module Posthog
     module Config
-      def self.build_client(api_key: ENV["POSTHOG_API_KEY"],
+      def self.build_client(api_key: ENV.fetch("POSTHOG_API_KEY", nil),
                             host: JxcRails::Posthog.api_host,
-                            personal_api_key: ENV["POSTHOG_FEATURE_FLAGS_KEY"],
+                            personal_api_key: ENV.fetch("POSTHOG_FEATURE_FLAGS_KEY", nil),
                             feature_flags_polling_interval: 600,
                             on_error: nil)
         return nil if api_key.nil? || api_key.empty?

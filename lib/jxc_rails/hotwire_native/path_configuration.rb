@@ -23,7 +23,7 @@ module JxcRails
       def path_configuration
         @hotwire_client = ClientVersion.from_request(request)
         min = JxcRails.configuration.hotwire_native.min_app_version
-        @hotwire_force_upgrade = min.present? && @hotwire_client&.below?(min) || false
+        @hotwire_force_upgrade = (min.present? && @hotwire_client&.below?(min)) || false
 
         response.set_header("Vary", "User-Agent, X-App-Version, X-App-Name, X-App-Build")
         response.set_header("Cache-Control", "private, no-store")
