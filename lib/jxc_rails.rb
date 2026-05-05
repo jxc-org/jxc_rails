@@ -31,6 +31,7 @@ module JxcRails
   autoload :FeatureFlags,    "jxc_rails/feature_flags"
   autoload :HotwireNative,   "jxc_rails/hotwire_native"
   autoload :PersistentLogin, "jxc_rails/persistent_login"
+  autoload :Posthog,         "jxc_rails/posthog"
   autoload :ShortCode,       "jxc_rails/short_code"
 end
 
