@@ -40,8 +40,10 @@ module JxcRails
 
     # Guard against a dependency bump that drops the gem backing the configured
     # ActiveStorage variant processor (e.g. image_processing 2.x dropping
-    # ruby-vips). Runs after the app's own initializers so ActiveStorage's
-    # configured processor is settled. See JxcRails::VariantProcessorCheck.
+    # ruby-vips). Runs in after_initialize, but reads the processor from
+    # app.config rather than ActiveStorage.variant_processor — the latter is
+    # itself assigned in a *peer* after_initialize hook whose ordering relative
+    # to this one is not guaranteed. See JxcRails::VariantProcessorCheck.
     initializer "jxc_rails.variant_processor_check" do |app|
       app.config.after_initialize do
         next unless JxcRails.config.variant_processor_check.enabled

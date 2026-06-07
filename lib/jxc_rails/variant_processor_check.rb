@@ -41,11 +41,11 @@ module JxcRails
       # the configured fail-fast environments (production by default) when the
       # backing gem is missing; otherwise logs a warning. Safe to call when
       # ActiveStorage / image_processing are not in use — it no-ops.
-      def run!(env: current_env, logger: default_logger)
+      def run!(env: current_env, logger: default_logger, processor: configured_variant_processor)
         return unless defined?(ActiveStorage)
 
         message = problem(
-          processor: ActiveStorage.variant_processor,
+          processor: processor,
           image_processing_present: gem_present?("image_processing"),
           gem_present: method(:gem_present?)
         )
@@ -54,6 +54,27 @@ module JxcRails
         return logger&.warn("[jxc_rails] #{message}") unless raise_in?(env)
 
         raise JxcRails::ConfigurationError, "[jxc_rails] #{message}"
+      end
+
+      # The variant processor ActiveStorage will actually use at runtime.
+      #
+      # Read from the app's *config* — NOT from +ActiveStorage.variant_processor+
+      # — on purpose. That module attribute is assigned from config inside
+      # ActiveStorage's own +config.after_initialize+ hook (see
+      # activestorage/lib/active_storage/engine.rb), which is a *peer* of the
+      # +after_initialize+ this check runs in (wired by the Railtie). Their
+      # relative order is not guaranteed; in practice this check often wins the
+      # race and reads the bare mattr default (+:mini_magick+) before the app's
+      # +config.active_storage.variant_processor = :vips+ has been applied —
+      # producing a false "mini_magick is not in the bundle" failure that breaks
+      # +assets:precompile+ / boot for apps that are correctly configured for
+      # +:vips+. +app.config+ is fully settled before any +after_initialize+
+      # runs, so reading it here is order-independent. The +|| :mini_magick+
+      # fallback mirrors ActiveStorage's own resolution for an unconfigured app.
+      def configured_variant_processor(app: rails_application)
+        return activestorage_default_processor unless app
+
+        app.config.active_storage.variant_processor || activestorage_default_processor
       end
 
       # Pure decision logic, dependency-injected so it is unit-testable without a
@@ -111,6 +132,18 @@ module JxcRails
       end
 
       private
+
+      def rails_application
+        Rails.application if defined?(Rails) && Rails.respond_to?(:application)
+      end
+
+      # ActiveStorage's fallback when the app sets no processor (engine.rb:
+      # +app.config.active_storage.variant_processor || :mini_magick+). The
+      # mattr default is also :mini_magick, so reading it here stays correct
+      # whether or not ActiveStorage's own after_initialize has run yet.
+      def activestorage_default_processor
+        (ActiveStorage.variant_processor if defined?(ActiveStorage)) || :mini_magick
+      end
 
       def raise_in?(env)
         Array(JxcRails.config.variant_processor_check.raise_environments)
