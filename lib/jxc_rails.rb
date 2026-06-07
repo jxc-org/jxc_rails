@@ -30,9 +30,10 @@ module JxcRails
 
   autoload :FeatureFlags,    "jxc_rails/feature_flags"
   autoload :HotwireNative,   "jxc_rails/hotwire_native"
-  autoload :PersistentLogin, "jxc_rails/persistent_login"
-  autoload :Posthog,         "jxc_rails/posthog"
-  autoload :ShortCode,       "jxc_rails/short_code"
+  autoload :PersistentLogin,       "jxc_rails/persistent_login"
+  autoload :Posthog,               "jxc_rails/posthog"
+  autoload :ShortCode,             "jxc_rails/short_code"
+  autoload :VariantProcessorCheck, "jxc_rails/variant_processor_check"
 end
 
 require_relative "jxc_rails/railtie" if defined?(Rails::Railtie)

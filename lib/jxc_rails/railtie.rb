@@ -37,5 +37,22 @@ module JxcRails
         include JxcRails::PersistentLogin::ViewHelper
       end
     end
+
+    # Guard against a dependency bump that drops the gem backing the configured
+    # ActiveStorage variant processor (e.g. image_processing 2.x dropping
+    # ruby-vips). Runs after the app's own initializers so ActiveStorage's
+    # configured processor is settled. See JxcRails::VariantProcessorCheck.
+    initializer "jxc_rails.variant_processor_check" do |app|
+      app.config.after_initialize do
+        next unless JxcRails.config.variant_processor_check.enabled
+
+        require "jxc_rails/variant_processor_check"
+        JxcRails::VariantProcessorCheck.run!
+      end
+    end
+
+    rake_tasks do
+      load File.expand_path("tasks/variant_processor.rake", __dir__)
+    end
   end
 end
