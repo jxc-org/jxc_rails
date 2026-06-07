@@ -2,12 +2,13 @@
 
 module JxcRails
   class Configuration
-    attr_reader :hotwire_native, :persistent_login, :short_code
+    attr_reader :hotwire_native, :persistent_login, :short_code, :variant_processor_check
 
     def initialize
-      @hotwire_native   = HotwireNativeConfig.new
-      @persistent_login = PersistentLoginConfig.new
-      @short_code       = ShortCodeConfig.new
+      @hotwire_native          = HotwireNativeConfig.new
+      @persistent_login        = PersistentLoginConfig.new
+      @short_code              = ShortCodeConfig.new
+      @variant_processor_check = VariantProcessorCheckConfig.new
     end
 
     class HotwireNativeConfig
@@ -36,6 +37,19 @@ module JxcRails
       def initialize
         @default_alphabet = :crockford
         @default_length   = 8
+      end
+    end
+
+    class VariantProcessorCheckConfig
+      # Whether the boot-time variant-processor assertion runs at all.
+      attr_accessor :enabled
+      # Rails environments in which a missing backing gem raises (and so fails
+      # boot / assets:precompile / the deploy). Other environments warn only.
+      attr_accessor :raise_environments
+
+      def initialize
+        @enabled            = true
+        @raise_environments = %w[production]
       end
     end
   end
