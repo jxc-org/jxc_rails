@@ -72,6 +72,32 @@ RSpec.describe JxcRails::VariantProcessorCheck do
     end
   end
 
+  describe ".configured_variant_processor" do
+    # A stand-in for Rails.application: app.config.active_storage.variant_processor.
+    def app_with(processor)
+      active_storage = Struct.new(:variant_processor).new(processor)
+      config = Struct.new(:active_storage).new(active_storage)
+      Struct.new(:config).new(config)
+    end
+
+    # Regression for the 0.3.0 initializer-ordering bug: the check ran in
+    # after_initialize and read ActiveStorage.variant_processor, but that mattr
+    # is assigned in ActiveStorage's *own* after_initialize hook (a peer), which
+    # can run later — so the check saw the stale :mini_magick default and falsely
+    # failed apps correctly configured for :vips. It must read app.config.
+    it "reads the processor the app configured, independent of boot ordering" do
+      expect(described_class.configured_variant_processor(app: app_with(:vips))).to eq(:vips)
+    end
+
+    it "falls back to :mini_magick when the app configures no processor" do
+      expect(described_class.configured_variant_processor(app: app_with(nil))).to eq(:mini_magick)
+    end
+
+    it "falls back to :mini_magick when there is no Rails application" do
+      expect(described_class.configured_variant_processor(app: nil)).to eq(:mini_magick)
+    end
+  end
+
   describe ".gem_present?" do
     it "is true for a gem that is actually installed" do
       expect(described_class.gem_present?("rspec")).to be(true)
