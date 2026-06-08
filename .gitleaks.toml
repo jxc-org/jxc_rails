@@ -1,0 +1,48 @@
+# jxc-org shared gitleaks config. Extends gitleaks' built-in default ruleset.
+# Tuned to suppress this org's known-benign false positives (audited 2026-06-07).
+title = "jxc-org gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "jxc-org global allowlist"
+
+regexes = [
+  # PostHog public project API keys (phc_…) are client-side write-only, safe to commit.
+  '''phc_[A-Za-z0-9]{30,}''',
+  # Dummy placeholder values used in lightbrain docs.
+  '''abc123xyz789''',
+  '''def456uvw012''',
+]
+
+paths = [
+  # sops-encrypted secrets: values are ENC[AES256_GCM,...], not plaintext.
+  '''(^|/)secrets\.enc\.ya?ml$''',
+  '''(^|/)\.sops\.ya?ml$''',
+  # Rails encrypted credentials: ciphertext, undecryptable without master.key.
+  '''(^|/)config/credentials\.yml\.enc$''',
+  '''(^|/)config/credentials/[^/]+\.yml\.enc$''',
+  # Devise initializer: only ever holds the commented-out generator secret_key default.
+  '''(^|/)config/initializers/devise\.rb$''',
+  # this config file itself
+  '''(^|/)\.gitleaks\.toml$''',
+  # example/template/sample placeholder files (e.g. "PASTE KEY HERE")
+  '''\.(example|sample|template|tmpl|dist)$''',
+  '''\.(example|sample|template|tmpl|dist)\.[A-Za-z0-9._-]+$''',
+  '''[._-](example|sample|template)\.[A-Za-z0-9]+$''',
+  '''(^|/)examples?/''',
+  # vendored CocoaPods dependencies (third-party code + lockfiles)
+  '''(^|/)Pods/''',
+  '''(^|/)Podfile\.lock$''',
+  '''(^|/)Manifest\.lock$''',
+  # test fixtures / specs commonly hold dummy secrets
+  '''_test\.go$''',
+  '''_spec\.rb$''',
+  '''(^|/)(test|tests|spec|specs|__tests__|fixtures|testdata)/''',
+  '''\.test\.[A-Za-z0-9]+$''',
+  # public verification tokens (published by design)
+  '''(^|/)\.well-known/''',
+  # IndexNow keys are published publicly to verify site ownership
+  '''(^|/)scripts/indexnow-ping\.mjs$''',
+]
