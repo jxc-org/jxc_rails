@@ -1,0 +1,75 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Suggests the next jxc_rails version from the Gemfile.lock diff, per the policy in
+# CONTRIBUTING.md: the bump mirrors the LARGEST SemVer jump among the BOM-managed
+# dependencies (the gemspec's runtime deps). It only inspects git — it never writes,
+# and it cannot see changes to jxc_rails's OWN API, so always sanity-check (a) by hand.
+#
+# Usage: bin/suggest-version [base-ref]   (base-ref defaults to HEAD)
+
+require "rubygems"
+
+ROOT = File.expand_path("..", __dir__)
+LOCK = "Gemfile.lock"
+LINE = /^([-+])\s{4}(\S+) \((\d+)\.(\d+)\.(\d+)\)$/ # ignores platform-suffixed variants
+
+def managed_gems
+  spec = Gem::Specification.load(File.join(ROOT, "jxc_rails.gemspec"))
+  spec.runtime_dependencies.to_set(&:name)
+end
+
+# => { "solid_cable" => { old: [3,0,12], new: [4,0,0] }, ... } for managed gems only
+def lock_changes(base_ref, managed)
+  diff = `git -C #{ROOT} diff #{base_ref} -- #{LOCK}`
+  diff.each_line.with_object({}) do |raw, acc|
+    sign, name, *parts = LINE.match(raw)&.captures
+    next unless name && managed.include?(name)
+
+    slot = sign == "-" ? :old : :new
+    (acc[name] ||= {})[slot] = parts.map(&:to_i)
+  end
+end
+
+def jump_level(old, new)
+  return :major if old[0] != new[0]
+  return :minor if old[1] != new[1]
+  return :patch if old[2] != new[2]
+
+  nil
+end
+
+def largest_jump(changes)
+  levels = changes.filter_map { |_, v| jump_level(v[:old], v[:new]) if v[:old] && v[:new] }
+  %i[major minor patch].find { |level| levels.include?(level) }
+end
+
+def current_version
+  File.read(File.join(ROOT, "lib/jxc_rails/version.rb"))[/VERSION = "([^"]+)"/, 1]
+      .split(".").map(&:to_i)
+end
+
+def bump(version, level)
+  major, minor, patch = version
+  case level
+  when :major then [major + 1, 0, 0]
+  when :minor then [major, minor + 1, 0]
+  when :patch then [major, minor, patch + 1]
+  end
+end
+
+base_ref = ARGV.fetch(0, "HEAD")
+changes = lock_changes(base_ref, managed_gems)
+level = largest_jump(changes)
+
+if level.nil?
+  warn "No BOM dependency version changes vs #{base_ref}. Bump only if jxc_rails's OWN API changed."
+  exit 0
+end
+
+current = current_version
+suggested = bump(current, level)
+warn "Largest BOM dependency jump vs #{base_ref}: #{level}"
+changes.each { |name, v| warn "  #{name}: #{v[:old]&.join(".")} -> #{v[:new]&.join(".")}" if v[:old] && v[:new] }
+warn "Suggested: #{current.join(".")} -> #{suggested.join(".")}  (take MAX with your own API change)"
+puts suggested.join(".")

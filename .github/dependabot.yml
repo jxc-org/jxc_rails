@@ -1,12 +1,31 @@
 version: 2
 updates:
+# jxc_rails is the BOM: this repo is the SINGLE place the shared Rails runtime stack
+# gets version PRs. Consuming apps (birthdaze/gigq/lumberlog) `ignore` these same gems
+# in their own dependabot config, then adopt by bumping the jxc_rails tag.
 - package-ecosystem: bundler
   directory: "/"
   schedule:
     interval: weekly
-  open-pull-requests-limit: 0
+  open-pull-requests-limit: 10
+  groups:
+    rails-stack:
+      patterns:
+        - "rails"
+        - "propshaft"
+        - "importmap-rails"
+        - "turbo-rails"
+        - "stimulus-rails"
+        - "solid_*"
+        - "devise"
+        - "image_processing"
+        - "ruby-vips"
+        - "pg"
+        - "puma"
+        - "bootsnap"
+        - "thruster"
 - package-ecosystem: github-actions
   directory: "/"
   schedule:
     interval: weekly
-  open-pull-requests-limit: 0
+  open-pull-requests-limit: 5
