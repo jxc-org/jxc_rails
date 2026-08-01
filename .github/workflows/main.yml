@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    runs-on: homeserver-linux
+    runs-on: ${{ vars.CI_RUNNER || 'homeserver-linux' }}
     name: Ruby ${{ matrix.ruby }}
     strategy:
       matrix:
