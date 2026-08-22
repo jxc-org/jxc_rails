@@ -2,12 +2,13 @@
 
 module JxcRails
   class Configuration
-    attr_reader :hotwire_native, :persistent_login, :short_code, :variant_processor_check
+    attr_reader :hotwire_native, :persistent_login, :short_code, :system_specs, :variant_processor_check
 
     def initialize
       @hotwire_native          = HotwireNativeConfig.new
       @persistent_login        = PersistentLoginConfig.new
       @short_code              = ShortCodeConfig.new
+      @system_specs            = SystemSpecsConfig.new
       @variant_processor_check = VariantProcessorCheckConfig.new
     end
 
@@ -37,6 +38,22 @@ module JxcRails
       def initialize
         @default_alphabet = :crockford
         @default_length   = 8
+      end
+    end
+
+    class SystemSpecsConfig
+      # Named viewport every browser spec starts at unless it declares another.
+      # Deliberately NOT "whatever the driver defaults to" — that default was
+      # ~1257px, a width nothing in the fleet actually ships at.
+      attr_accessor :default_viewport
+      # Chrome args for drive_headless_chrome!. Note --window-size is absent on
+      # purpose: it does not survive Capybara's driver setup. Viewports are set
+      # with resize_to instead.
+      attr_accessor :browser_args
+
+      def initialize
+        @default_viewport = :desktop
+        @browser_args     = %w[--no-sandbox --disable-dev-shm-usage]
       end
     end
 
