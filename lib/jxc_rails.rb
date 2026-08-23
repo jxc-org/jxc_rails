@@ -33,6 +33,7 @@ module JxcRails
   autoload :PersistentLogin,       "jxc_rails/persistent_login"
   autoload :Posthog,               "jxc_rails/posthog"
   autoload :ShortCode,             "jxc_rails/short_code"
+  autoload :SystemSpecs,           "jxc_rails/system_specs"
   autoload :VariantProcessorCheck, "jxc_rails/variant_processor_check"
 end
 
