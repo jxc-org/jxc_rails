@@ -14,10 +14,10 @@ module JxcRails
   #    raises.
   #
   # 2. {Viewports} — the *silent viewport*. Chrome's +--window-size+ argument
-  #    does not survive Capybara's driver setup (~1257px observed regardless),
-  #    so specs that don't explicitly resize can't see viewport-dependent bugs.
-  #    Viewports come from a named set, are applied with +resize_to+, and are
-  #    verified against the browser's own reported width.
+  #    is overridden, not honoured (~1257px observed regardless), so specs that
+  #    don't explicitly resize can't see viewport-dependent bugs. Viewports come
+  #    from a named set, are applied with +resize_to+, and are verified against
+  #    the browser's own reported width.
   #
   # 3. {Helpers.chrome_arguments} — the *silent Chrome argument*. +driven_by+'s
   #    +options:+ keyword looks like it forwards Chrome args and does not:

@@ -14,8 +14,9 @@ module JxcRails
       #   before { drive_headless_chrome!(viewport: :phone_new) }
       #
       # The viewport is applied with resize_to AFTER the driver exists — passing
-      # --window-size here would be discarded by Capybara's setup (that is
-      # failure mode 2; see JxcRails::SystemSpecs).
+      # --window-size here reaches Chrome but is then undone by the screen_size
+      # resize Rails does when it builds the driver (that is failure mode 2; see
+      # JxcRails::SystemSpecs::Viewports).
       #
       # The Chrome args go through driven_by's *block*, not its +options:+
       # keyword — see {.chrome_arguments} for why the keyword is a trap.

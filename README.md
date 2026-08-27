@@ -96,8 +96,22 @@ The obvious way to size a browser spec is a driver argument:
 Selenium::WebDriver::Chrome::Options.new(args: %w[--window-size=390,844])
 ```
 
-**Chrome's `--window-size` does not survive Capybara's driver setup.** Specs
-passing it were observed running at ~1257px regardless of what they asked for.
+**Chrome's `--window-size` is overridden.** Specs passing it were observed
+running at ~1257px regardless of what they asked for.
+
+It is worth being exact about what overrides it, because "Capybara discards it"
+— the original reading — is wrong. It is Rails, in two different places:
+
+1. **Before v0.3.2 the argument never reached Chrome at all**, because it went
+   through `driven_by`'s `options:` keyword. That is failure mode 3 below.
+2. **Even delivered, it is undone a moment later.**
+   `ActionDispatch::SystemTesting::Driver#register_selenium` resizes the window
+   to `screen_size` (default `[1400, 1400]`) as soon as the driver exists.
+   Measured: `--window-size=390,844` reaches Chrome's command line and the
+   session still reports `innerWidth=1400`.
+
+The advice is unchanged; the reason is now known.
+
 Every spec that doesn't explicitly resize therefore runs at an arbitrary width
 that nothing in the product actually ships at — so viewport-dependent bugs are
 structurally invisible to it. A real spec passed against CSS that was broken at
@@ -188,8 +202,8 @@ forgets to declare a viewport fails rather than silently running at ~1257px.
 
 What was rejected, and why:
 
-- **A `--window-size` driver arg** — this is failure mode 2 itself. It is
-  silently discarded, which is the entire problem.
+- **A `--window-size` driver arg** — this is failure mode 2 itself. Rails
+  resizes the window out from under it, which is the entire problem.
 - **Passing Chrome args through `driven_by(options:)`** — failure mode 3. Rails
   overwrites the key; the args never reach the browser.
 - **A config-level `before` hook that resizes every system spec automatically** —
