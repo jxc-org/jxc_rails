@@ -96,8 +96,22 @@ The obvious way to size a browser spec is a driver argument:
 Selenium::WebDriver::Chrome::Options.new(args: %w[--window-size=390,844])
 ```
 
-**Chrome's `--window-size` does not survive Capybara's driver setup.** Specs
-passing it were observed running at ~1257px regardless of what they asked for.
+**Chrome's `--window-size` is overridden.** Specs passing it were observed
+running at ~1257px regardless of what they asked for.
+
+It is worth being exact about what overrides it, because "Capybara discards it"
+— the original reading — is wrong. It is Rails, in two different places:
+
+1. **Before v0.3.2 the argument never reached Chrome at all**, because it went
+   through `driven_by`'s `options:` keyword. That is failure mode 3 below.
+2. **Even delivered, it is undone a moment later.**
+   `ActionDispatch::SystemTesting::Driver#register_selenium` resizes the window
+   to `screen_size` (default `[1400, 1400]`) as soon as the driver exists.
+   Measured: `--window-size=390,844` reaches Chrome's command line and the
+   session still reports `innerWidth=1400`.
+
+The advice is unchanged; the reason is now known.
+
 Every spec that doesn't explicitly resize therefore runs at an arbitrary width
 that nothing in the product actually ships at — so viewport-dependent bugs are
 structurally invisible to it. A real spec passed against CSS that was broken at
@@ -113,6 +127,43 @@ produced the bug.
 | `:phone_old` | 390x844 | iPhone 12–13 / 14 class |
 | `:phone_new` | 402x874 | iPhone 16 class |
 | `:desktop` | 1280x900 | fleet desktop screenshot width |
+
+### Failure mode 3: the silent Chrome argument
+
+The obvious way to hand Chrome its flags is `driven_by`'s `options:` keyword:
+
+```ruby
+# Looks right. Delivers nothing.
+driven_by(:selenium, using: :headless_chrome,
+          options: { options: Selenium::WebDriver::Chrome::Options.new(args: %w[--disable-dev-shm-usage]) })
+```
+
+Rails throws it away. `ActionDispatch::SystemTesting::Driver#browser_options` is
+
+```ruby
+@options.merge(options: @browser.options)
+```
+
+— the caller's `:options` is *overwritten* by the `Chrome::Options` Rails built
+for itself. No warning, no deprecation: Chrome simply launches without the
+flags.
+
+Nothing green could have caught it. `ubuntu-latest` and dev laptops have a roomy
+`/dev/shm`, so a missing `--disable-dev-shm-usage` costs nothing there. On the
+self-hosted ARC runners — a container whose `/dev/shm` is the 64MB default — the
+first handful of browser specs pass, `/dev/shm` fills, and every one after it
+dies with `Selenium::WebDriver::Error::WebDriverError: tab crashed`.
+
+The seam Rails actually honours is the block, which yields that very options
+object:
+
+```ruby
+driven_by(:selenium, using: :headless_chrome) { |options| options.add_argument("--disable-dev-shm-usage") }
+```
+
+`drive_headless_chrome!` does this for you, and a spec asserts on the arguments
+Rails hands to Capybara — not on the shape of the hash we passed in — so the
+plumbing itself stays covered.
 
 ### Usage
 
@@ -151,8 +202,10 @@ forgets to declare a viewport fails rather than silently running at ~1257px.
 
 What was rejected, and why:
 
-- **A `--window-size` driver arg** — this is failure mode 2 itself. It is
-  silently discarded, which is the entire problem.
+- **A `--window-size` driver arg** — this is failure mode 2 itself. Rails
+  resizes the window out from under it, which is the entire problem.
+- **Passing Chrome args through `driven_by(options:)`** — failure mode 3. Rails
+  overwrites the key; the args never reach the browser.
 - **A config-level `before` hook that resizes every system spec automatically** —
   RSpec runs config-level hooks *before* group-level ones, so it would fire
   before the spec's own `driven_by`, resize a driver that doesn't exist yet, and

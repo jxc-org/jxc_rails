@@ -4,12 +4,27 @@ module JxcRails
   module SystemSpecs
     # Failure mode 2: the silent viewport.
     #
-    # Chrome's +--window-size+ argument does not survive Capybara's driver
-    # setup (~1257px observed regardless of what was asked for), so a spec that
-    # doesn't explicitly resize runs at an arbitrary width and cannot see
-    # viewport-dependent bugs. Viewports are therefore set with +resize_to+,
-    # from a named set, and *verified* against the browser's own reported width
-    # — trusting the resize is what produced the bug in the first place.
+    # Chrome's +--window-size+ argument is overridden (~1257px observed
+    # regardless of what was asked for), so a spec that doesn't explicitly
+    # resize runs at an arbitrary width and cannot see viewport-dependent bugs.
+    #
+    # It is worth being exact about *what* overrides it, because "Capybara
+    # discards it" — the original reading — is wrong, and the real mechanism is
+    # Rails, in two different places:
+    #
+    # 1. Before v0.3.2 the argument never reached Chrome at all. It was handed
+    #    to +driven_by+'s +options:+ keyword, which Rails overwrites. That is
+    #    failure mode 3; see {Helpers.chrome_arguments}.
+    # 2. Even delivered, it is undone a moment later.
+    #    ActionDispatch::SystemTesting::Driver#register_selenium resizes the
+    #    window to +screen_size+ (default 1400x1400) as soon as the driver
+    #    exists. Measured: +--window-size=390,844+ reaches Chrome's command
+    #    line and the session still reports innerWidth=1400.
+    #
+    # So the advice is unchanged and the reason is now known: viewports are set
+    # with +resize_to+, from a named set, and *verified* against the browser's
+    # own reported width — trusting the resize is what produced the bug in the
+    # first place.
     #
     # Extended into {JxcRails::SystemSpecs}; constants resolve lexically from
     # there.
@@ -49,9 +64,10 @@ module JxcRails
         return nil if (expected.width - actual_width).abs <= tolerance
 
         "[jxc_rails] viewport did not take: asked for #{expected}, browser reports " \
-          "window.innerWidth=#{actual_width}. Chrome's --window-size arg does not survive " \
-          "Capybara driver setup — set viewports with resize_to (use_viewport/:viewport), and " \
-          "make sure no later driven_by call re-created the driver after the resize."
+          "window.innerWidth=#{actual_width}. Chrome's --window-size arg is overridden by the " \
+          "screen_size resize Rails does when it builds the driver — set viewports with " \
+          "resize_to (use_viewport/:viewport), and make sure no later driven_by call re-created " \
+          "the driver after the resize."
       end
 
       # After-example lint: fails a browser example that never declared a

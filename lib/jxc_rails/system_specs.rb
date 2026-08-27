@@ -14,10 +14,18 @@ module JxcRails
   #    raises.
   #
   # 2. {Viewports} — the *silent viewport*. Chrome's +--window-size+ argument
-  #    does not survive Capybara's driver setup (~1257px observed regardless),
-  #    so specs that don't explicitly resize can't see viewport-dependent bugs.
-  #    Viewports come from a named set, are applied with +resize_to+, and are
-  #    verified against the browser's own reported width.
+  #    is overridden, not honoured (~1257px observed regardless), so specs that
+  #    don't explicitly resize can't see viewport-dependent bugs. Viewports come
+  #    from a named set, are applied with +resize_to+, and are verified against
+  #    the browser's own reported width.
+  #
+  # 3. {Helpers.chrome_arguments} — the *silent Chrome argument*. +driven_by+'s
+  #    +options:+ keyword looks like it forwards Chrome args and does not:
+  #    Rails overwrites it with its own Chrome::Options. Args go through
+  #    driven_by's block instead. This is how +--disable-dev-shm-usage+ went
+  #    missing on the self-hosted ARC runners (64MB /dev/shm) and every browser
+  #    spec past the first handful died with "tab crashed", while ubuntu-latest
+  #    and dev laptops — roomy /dev/shm — stayed green.
   #
   # Wire it up once per app, in +rails_helper.rb+:
   #

@@ -67,4 +67,18 @@ module FakeCapybara
       "<html><body>rack_test</body></html>"
     end
   end
+
+  # Stands in for the Selenium::WebDriver::Chrome::Options object Rails yields
+  # to the driven_by block — it records the arguments added to it.
+  class ChromeOptions
+    attr_reader :args
+
+    def initialize
+      @args = []
+    end
+
+    def add_argument(arg)
+      @args << arg
+    end
+  end
 end
