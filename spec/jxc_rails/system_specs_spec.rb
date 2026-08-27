@@ -174,17 +174,31 @@ RSpec.describe JxcRails::SystemSpecs do
   end
 
   describe JxcRails::SystemSpecs::Helpers do
-    describe ".driver_options" do
-      it "falls back to bare headless_chrome when Selenium isn't loaded" do
-        skip "Selenium is loaded in this environment" if defined?(Selenium::WebDriver::Chrome::Options)
+    # Collects what .chrome_arguments adds, standing in for the Chrome::Options
+    # object Rails yields to the driven_by block.
+    def arguments_added_by(applier)
+      recorder = FakeCapybara::ChromeOptions.new
+      applier.call(recorder)
+      recorder.args
+    end
 
-        expect(described_class.driver_options(%w[--no-sandbox])).to eq(using: :headless_chrome)
+    describe ".driver_options" do
+      it "carries no :options key — driven_by overwrites it, so args sent that way vanish" do
+        expect(described_class.driver_options).to eq(using: :headless_chrome)
+      end
+    end
+
+    describe ".chrome_arguments" do
+      it "adds every configured arg to the options object Rails yields" do
+        expect(arguments_added_by(described_class.chrome_arguments)).to include("--no-sandbox", "--disable-dev-shm-usage")
+      end
+
+      it "accepts an explicit list, and tolerates a bare string" do
+        expect(arguments_added_by(described_class.chrome_arguments("--disable-gpu"))).to eq(["--disable-gpu"])
       end
 
       it "never passes --window-size, which Capybara's driver setup discards" do
-        options = described_class.driver_options(JxcRails.config.system_specs.browser_args)
-
-        expect(options.to_s).not_to include("--window-size")
+        expect(arguments_added_by(described_class.chrome_arguments)).not_to include(a_string_matching(/window-size/))
       end
     end
   end

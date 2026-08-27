@@ -114,6 +114,43 @@ produced the bug.
 | `:phone_new` | 402x874 | iPhone 16 class |
 | `:desktop` | 1280x900 | fleet desktop screenshot width |
 
+### Failure mode 3: the silent Chrome argument
+
+The obvious way to hand Chrome its flags is `driven_by`'s `options:` keyword:
+
+```ruby
+# Looks right. Delivers nothing.
+driven_by(:selenium, using: :headless_chrome,
+          options: { options: Selenium::WebDriver::Chrome::Options.new(args: %w[--disable-dev-shm-usage]) })
+```
+
+Rails throws it away. `ActionDispatch::SystemTesting::Driver#browser_options` is
+
+```ruby
+@options.merge(options: @browser.options)
+```
+
+— the caller's `:options` is *overwritten* by the `Chrome::Options` Rails built
+for itself. No warning, no deprecation: Chrome simply launches without the
+flags.
+
+Nothing green could have caught it. `ubuntu-latest` and dev laptops have a roomy
+`/dev/shm`, so a missing `--disable-dev-shm-usage` costs nothing there. On the
+self-hosted ARC runners — a container whose `/dev/shm` is the 64MB default — the
+first handful of browser specs pass, `/dev/shm` fills, and every one after it
+dies with `Selenium::WebDriver::Error::WebDriverError: tab crashed`.
+
+The seam Rails actually honours is the block, which yields that very options
+object:
+
+```ruby
+driven_by(:selenium, using: :headless_chrome) { |options| options.add_argument("--disable-dev-shm-usage") }
+```
+
+`drive_headless_chrome!` does this for you, and a spec asserts on the arguments
+Rails hands to Capybara — not on the shape of the hash we passed in — so the
+plumbing itself stays covered.
+
 ### Usage
 
 Once per app, in `spec/rails_helper.rb`:
@@ -153,6 +190,8 @@ What was rejected, and why:
 
 - **A `--window-size` driver arg** — this is failure mode 2 itself. It is
   silently discarded, which is the entire problem.
+- **Passing Chrome args through `driven_by(options:)`** — failure mode 3. Rails
+  overwrites the key; the args never reach the browser.
 - **A config-level `before` hook that resizes every system spec automatically** —
   RSpec runs config-level hooks *before* group-level ones, so it would fire
   before the spec's own `driven_by`, resize a driver that doesn't exist yet, and
