@@ -123,6 +123,33 @@ RSpec.describe JxcRails::SystemSpecs do
         .to raise_error(JxcRails::SystemSpecs::ViewportError, /viewport did not take.*innerWidth=1257/m)
     end
 
+    context "when the OS window has a width floor (macOS headless Chrome won't go below 500px)" do
+      it "sets the layout viewport over CDP, keeping resize_to, and verifies it took" do
+        page = FakeCapybara::CdpBrowserSession.new(min_window_width: 500)
+
+        described_class.apply_viewport!(page, :phone_new)
+
+        expect(page.resizes).to eq([[402, 874]])
+        expect(page.cdp_calls).to eq([["Emulation.setDeviceMetricsOverride",
+                                       { width: 402, height: 874, deviceScaleFactor: 0, mobile: false }]])
+        expect(described_class.applied_viewport.width).to eq(402)
+      end
+
+      it "still raises when the driver has no CDP to fall back on" do
+        page = FakeCapybara::BrowserSession.new(min_window_width: 500)
+
+        expect { described_class.apply_viewport!(page, :phone_new) }
+          .to raise_error(JxcRails::SystemSpecs::ViewportError, /innerWidth=500/)
+      end
+
+      it "still raises when the CDP override doesn't take either" do
+        page = FakeCapybara::CdpBrowserSession.new(min_window_width: 500, ignore_cdp: true)
+
+        expect { described_class.apply_viewport!(page, :phone_new) }
+          .to raise_error(JxcRails::SystemSpecs::ViewportError, /innerWidth=500/)
+      end
+    end
+
     it "raises when the session has no resizable window (driven_by :rack_test)" do
       expect { described_class.apply_viewport!(FakeCapybara::RackTestSession.new, :desktop) }
         .to raise_error(JxcRails::SystemSpecs::ViewportError, /no resizable window/)
