@@ -18,19 +18,22 @@ module FakeCapybara
 
     def resize_to(width, height)
       @resizes << [width, height]
-      @session.reported_width = width unless @session.ignore_resize
+      @session.reported_width = [width, @session.min_window_width].max unless @session.ignore_resize
     end
   end
 
   # A session backed by a real browser: page.driver.browser.manage.window
-  # resolves, and evaluate_script answers.
+  # resolves, and evaluate_script answers. +min_window_width+ simulates an OS
+  # window floor (macOS headless Chrome: 500px) — resize_to below it clamps.
   class BrowserSession
     attr_accessor :reported_width, :ignore_resize
+    attr_reader :min_window_width, :window
 
-    def initialize(reported_width: nil, ignore_resize: false)
-      @reported_width = reported_width
-      @ignore_resize  = ignore_resize
-      @window         = Window.new(self)
+    def initialize(reported_width: nil, ignore_resize: false, min_window_width: 0)
+      @reported_width   = reported_width
+      @ignore_resize    = ignore_resize
+      @min_window_width = min_window_width
+      @window           = Window.new(self)
     end
 
     def resizes
@@ -49,12 +52,29 @@ module FakeCapybara
       self
     end
 
-    attr_reader :window
-
     def evaluate_script(script)
       raise ArgumentError, "unexpected script: #{script}" unless script == "window.innerWidth"
 
       @reported_width
+    end
+  end
+
+  # A Chromium session: also answers execute_cdp. Emulation.setDeviceMetricsOverride
+  # sets the layout viewport directly, so it is not subject to the window floor —
+  # unless +ignore_cdp+, which simulates the override silently not taking.
+  class CdpBrowserSession < BrowserSession
+    attr_reader :cdp_calls
+
+    def initialize(ignore_cdp: false, **)
+      super(**)
+      @ignore_cdp = ignore_cdp
+      @cdp_calls  = []
+    end
+
+    def execute_cdp(cmd, **params)
+      @cdp_calls << [cmd, params]
+      self.reported_width = params[:width] if cmd == "Emulation.setDeviceMetricsOverride" && !@ignore_cdp
+      {}
     end
   end
 

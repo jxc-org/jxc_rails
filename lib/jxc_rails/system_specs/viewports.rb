@@ -50,6 +50,7 @@ module JxcRails
         end
 
         window.resize_to(target.width, target.height)
+        emulate_layout_viewport(page, target)
         drift = viewport_drift(expected: target, actual_width: measured_width(page))
         raise ViewportError, drift if drift
 
@@ -110,6 +111,20 @@ module JxcRails
         manage  = browser.respond_to?(:manage) ? browser.manage : nil
         window  = manage.respond_to?(:window) ? manage.window : nil
         window if window.respond_to?(:resize_to)
+      end
+
+      # resize_to has a floor: macOS headless Chrome won't size a window below
+      # 500px wide, so resize_to(402, 874) leaves innerWidth at exactly 500
+      # (measured, Chrome 152; Linux CI Chromium has no floor). The CDP override
+      # sets the layout viewport itself, independent of the OS window. It is a
+      # second way to SET the width, not a reason to trust it — apply_viewport!'s
+      # innerWidth read still decides. Non-Chromium drivers skip it.
+      def emulate_layout_viewport(page, target)
+        browser = page.driver.browser # window_for already proved this chain resolves
+        return unless browser.respond_to?(:execute_cdp)
+
+        browser.execute_cdp("Emulation.setDeviceMetricsOverride",
+                            width: target.width, height: target.height, deviceScaleFactor: 0, mobile: false)
       end
 
       # The rendered viewport width — what media queries actually see.

@@ -122,6 +122,17 @@ args), and **verified** — the helper reads `window.innerWidth` back from the
 browser and raises if the resize didn't take. Trusting the resize is what
 produced the bug.
 
+**`resize_to` has a floor on macOS (v0.3.3).** Headless Chrome there won't size
+a window below **500px** wide: measured on Chrome 152, `resize_to(402, 874)`,
+`(390, 844)` and `(450, …)` all leave `innerWidth` *and* `outerWidth` at exactly
+500, while `resize_to(600, …)` takes. Linux CI Chromium has no such floor, which
+is why phone viewports passed in CI and raised locally. So on Chromium drivers
+the helper also sets the layout viewport over CDP
+(`Emulation.setDeviceMetricsOverride`), which is independent of the OS window.
+`resize_to` is kept (non-Chromium drivers have nothing else). The `innerWidth`
+check is **unchanged** and still decides: the CDP call is a second way to *set*
+the width, not a reason to trust it.
+
 | Name | Size | Matches |
 |---|---|---|
 | `:phone_old` | 390x844 | iPhone 12–13 / 14 class |
