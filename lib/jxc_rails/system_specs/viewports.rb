@@ -50,8 +50,13 @@ module JxcRails
         end
 
         window.resize_to(target.width, target.height)
-        emulate_layout_viewport(page, target)
+        cdp_error = emulate_layout_viewport(page, target)
         drift = viewport_drift(expected: target, actual_width: measured_width(page))
+        # Only when the viewport ALSO failed: a swallowed CDP error is not itself a
+        # problem (plenty of drivers have no CDP and resize_to is enough), but if
+        # the width is wrong it is very likely the reason, and the drift message
+        # otherwise sends the reader after --window-size and screen_size instead.
+        drift = "#{drift} The CDP layout-viewport override also failed (#{cdp_error})." if drift && cdp_error
         raise ViewportError, drift if drift
 
         self.applied_viewport = target
@@ -143,8 +148,12 @@ module JxcRails
         begin
           browser.execute_cdp("Emulation.setDeviceMetricsOverride",
                               width: target.width, height: target.height, deviceScaleFactor: 0, mobile: false)
-        rescue StandardError
           nil
+        rescue StandardError => e
+          # Returned, not logged: apply_viewport! appends it to the drift message
+          # IF the viewport also came out wrong. A rescue that leaves no trace
+          # makes "CDP is unreachable" invisible to whoever debugs the failure.
+          "#{e.class}: #{e.message}"
         end
       end
 
