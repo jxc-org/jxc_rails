@@ -119,12 +119,33 @@ module JxcRails
       # sets the layout viewport itself, independent of the OS window. It is a
       # second way to SET the width, not a reason to trust it — apply_viewport!'s
       # innerWidth read still decides. Non-Chromium drivers skip it.
+      #
+      # +respond_to?+ proves the method EXISTS, not that the session ACCEPTS the
+      # command: a remote grid without a CDP endpoint answers execute_cdp and
+      # then fails. So the call is rescued and a failed override is simply not
+      # an override -- apply_viewport!'s innerWidth read runs next and raises a
+      # ViewportError naming the real measured width, which is exactly the
+      # behaviour that existed before CDP was introduced. Without this, a driver
+      # that cannot do CDP would start failing viewports that resize_to alone
+      # already handled, Linux CI included: a change meant to ADD a capability
+      # would subtract one.
+      #
+      # The rescue is broad on purpose and narrow where it counts -- it wraps
+      # ONE call, so it cannot swallow anything else, and the drift check
+      # immediately after is what enforces correctness. Rescuing a named
+      # Selenium class instead would mean referencing a constant this gem never
+      # loads (it duck-types the driver), trading a runtime raise for a
+      # load-time NameError in precisely the environments this protects.
       def emulate_layout_viewport(page, target)
         browser = page.driver.browser # window_for already proved this chain resolves
         return unless browser.respond_to?(:execute_cdp)
 
-        browser.execute_cdp("Emulation.setDeviceMetricsOverride",
-                            width: target.width, height: target.height, deviceScaleFactor: 0, mobile: false)
+        begin
+          browser.execute_cdp("Emulation.setDeviceMetricsOverride",
+                              width: target.width, height: target.height, deviceScaleFactor: 0, mobile: false)
+        rescue StandardError
+          nil
+        end
       end
 
       # The rendered viewport width — what media queries actually see.

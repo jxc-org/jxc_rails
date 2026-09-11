@@ -133,6 +133,19 @@ the helper also sets the layout viewport over CDP
 check is **unchanged** and still decides: the CDP call is a second way to *set*
 the width, not a reason to trust it.
 
+**The CDP call is rescued (v0.3.4).** `respond_to?(:execute_cdp)` proves the
+method exists, not that the session accepts the command — a remote grid without a
+CDP endpoint answers it and then fails. A failed override is simply not an
+override: the `innerWidth` check runs next and raises `ViewportError` with the
+real measured width, the same as before CDP existed. Without the rescue, a driver
+that cannot do CDP would start failing viewports that `resize_to` alone already
+handled.
+
+Note what the override does **not** do: `mobile: false` means no touch emulation,
+no device-pixel-ratio change and no mobile user-agent. It sets the layout viewport
+so media queries see the width you asked for. That is the right default for
+screenshotting a responsive layout, and it is not device emulation.
+
 | Name | Size | Matches |
 |---|---|---|
 | `:phone_old` | 390x844 | iPhone 12–13 / 14 class |
