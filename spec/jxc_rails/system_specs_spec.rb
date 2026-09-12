@@ -148,6 +148,39 @@ RSpec.describe JxcRails::SystemSpecs do
         expect { described_class.apply_viewport!(page, :phone_new) }
           .to raise_error(JxcRails::SystemSpecs::ViewportError, /innerWidth=500/)
       end
+
+      # respond_to?(:execute_cdp) proves the method EXISTS, not that the session
+      # accepts the command. A driver that answers it but has no CDP endpoint
+      # (a remote grid, say) must not turn a viewport problem into a raw driver
+      # error — least of all on Linux CI, where resize_to alone already worked
+      # before CDP was introduced. A failed SET falls through to the innerWidth
+      # check, which is what decides.
+      it "raises ViewportError, not the driver's error, when execute_cdp itself raises" do
+        page = FakeCapybara::CdpBrowserSession.new(min_window_width: 500, raise_cdp: true)
+
+        expect { described_class.apply_viewport!(page, :phone_new) }
+          .to raise_error(JxcRails::SystemSpecs::ViewportError, /innerWidth=500/)
+        expect(page.resizes).to eq([[402, 874]])
+      end
+
+      # A rescue that leaves no trace makes "CDP is unreachable" invisible: the
+      # drift message alone sends the reader after --window-size and screen_size,
+      # which are not the cause here.
+      it "names the swallowed CDP failure in the error, so it is not invisible" do
+        page = FakeCapybara::CdpBrowserSession.new(min_window_width: 500, raise_cdp: true)
+
+        expect { described_class.apply_viewport!(page, :phone_new) }
+          .to raise_error(JxcRails::SystemSpecs::ViewportError,
+                          /CDP layout-viewport override also failed .*CdpUnavailable: no CDP endpoint/)
+      end
+
+      it "says nothing about CDP when the viewport came out right" do
+        page = FakeCapybara::CdpBrowserSession.new(min_window_width: 500)
+
+        described_class.apply_viewport!(page, :phone_new)
+
+        expect(described_class.applied_viewport.width).to eq(402)
+      end
     end
 
     it "raises when the session has no resizable window (driven_by :rack_test)" do

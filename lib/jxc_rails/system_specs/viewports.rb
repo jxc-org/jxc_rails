@@ -50,8 +50,13 @@ module JxcRails
         end
 
         window.resize_to(target.width, target.height)
-        emulate_layout_viewport(page, target)
+        cdp_error = emulate_layout_viewport(page, target)
         drift = viewport_drift(expected: target, actual_width: measured_width(page))
+        # Only when the viewport ALSO failed: a swallowed CDP error is not itself a
+        # problem (plenty of drivers have no CDP and resize_to is enough), but if
+        # the width is wrong it is very likely the reason, and the drift message
+        # otherwise sends the reader after --window-size and screen_size instead.
+        drift = "#{drift} The CDP layout-viewport override also failed (#{cdp_error})." if drift && cdp_error
         raise ViewportError, drift if drift
 
         self.applied_viewport = target
@@ -119,12 +124,37 @@ module JxcRails
       # sets the layout viewport itself, independent of the OS window. It is a
       # second way to SET the width, not a reason to trust it — apply_viewport!'s
       # innerWidth read still decides. Non-Chromium drivers skip it.
+      #
+      # +respond_to?+ proves the method EXISTS, not that the session ACCEPTS the
+      # command: a remote grid without a CDP endpoint answers execute_cdp and
+      # then fails. So the call is rescued and a failed override is simply not
+      # an override -- apply_viewport!'s innerWidth read runs next and raises a
+      # ViewportError naming the real measured width, which is exactly the
+      # behaviour that existed before CDP was introduced. Without this, a driver
+      # that cannot do CDP would start failing viewports that resize_to alone
+      # already handled, Linux CI included: a change meant to ADD a capability
+      # would subtract one.
+      #
+      # The rescue is broad on purpose and narrow where it counts -- it wraps
+      # ONE call, so it cannot swallow anything else, and the drift check
+      # immediately after is what enforces correctness. Rescuing a named
+      # Selenium class instead would mean referencing a constant this gem never
+      # loads (it duck-types the driver), trading a runtime raise for a
+      # load-time NameError in precisely the environments this protects.
       def emulate_layout_viewport(page, target)
         browser = page.driver.browser # window_for already proved this chain resolves
         return unless browser.respond_to?(:execute_cdp)
 
-        browser.execute_cdp("Emulation.setDeviceMetricsOverride",
-                            width: target.width, height: target.height, deviceScaleFactor: 0, mobile: false)
+        begin
+          browser.execute_cdp("Emulation.setDeviceMetricsOverride",
+                              width: target.width, height: target.height, deviceScaleFactor: 0, mobile: false)
+          nil
+        rescue StandardError => e
+          # Returned, not logged: apply_viewport! appends it to the drift message
+          # IF the viewport also came out wrong. A rescue that leaves no trace
+          # makes "CDP is unreachable" invisible to whoever debugs the failure.
+          "#{e.class}: #{e.message}"
+        end
       end
 
       # The rendered viewport width — what media queries actually see.

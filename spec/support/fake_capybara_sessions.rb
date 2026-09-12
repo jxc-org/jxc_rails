@@ -63,16 +63,25 @@ module FakeCapybara
   # sets the layout viewport directly, so it is not subject to the window floor —
   # unless +ignore_cdp+, which simulates the override silently not taking.
   class CdpBrowserSession < BrowserSession
+    # Raised by +raise_cdp+. Stands in for the driver-level errors a real
+    # Selenium session throws when it answers execute_cdp but the command does
+    # not reach a CDP endpoint — a remote grid without one, say. The gem never
+    # loads Selenium, so the real class cannot be referenced here.
+    class CdpUnavailable < StandardError; end
+
     attr_reader :cdp_calls
 
-    def initialize(ignore_cdp: false, **)
+    def initialize(ignore_cdp: false, raise_cdp: false, **)
       super(**)
       @ignore_cdp = ignore_cdp
+      @raise_cdp  = raise_cdp
       @cdp_calls  = []
     end
 
     def execute_cdp(cmd, **params)
       @cdp_calls << [cmd, params]
+      raise CdpUnavailable, "no CDP endpoint" if @raise_cdp
+
       self.reported_width = params[:width] if cmd == "Emulation.setDeviceMetricsOverride" && !@ignore_cdp
       {}
     end
