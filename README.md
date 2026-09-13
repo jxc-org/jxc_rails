@@ -265,12 +265,12 @@ goes away — never to make a red build green.
 
 ## Status
 
-Scaffold only. Module implementations pending.
+All modules are implemented and in use by the Rails apps.
 
-| Module | Status |
-|---|---|
-| `HotwireNative` | skeleton |
-| `PersistentLogin` | skeleton |
-| `ShortCode` | skeleton |
-| `SystemSpecs` | implemented |
-| `VariantProcessorCheck` | implemented |
+| Module | Status | Used by |
+|---|---|---|
+| `HotwireNative` | implemented | birthdaze, costco-checker, gigq, lumberlog |
+| `PersistentLogin` | implemented | birthdaze, costco-checker, gigq, lumberlog |
+| `ShortCode` | implemented | birthdaze, gigq |
+| `SystemSpecs` | implemented | — |
+| `VariantProcessorCheck` | implemented | — |
