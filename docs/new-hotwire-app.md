@@ -535,7 +535,7 @@ all), so copying it verbatim opts you into floating by default.
 
 The build-number seed (`CURRENT_PROJECT_VERSION`: timestamp vs `2`) started as an open
 question and was closed by measurement rather than preference — nothing functional
-depends on it. The decision and its reasoning are in [§2.1](#21-iosprojectyml).
+depends on it. The decision and its reasoning are in §2.1, `ios/project.yml`.
 
 ---
 
