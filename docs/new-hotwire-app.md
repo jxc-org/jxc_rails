@@ -115,6 +115,26 @@ ios-path-config: ## Render bundled path-configuration.json for iOS from the jbui
 	bundle exec rake hotwire_native:generate_ios_path_config
 ```
 
+> **This guide's author could not read `costco-checker/lib/tasks/hotwire_native.rake`
+> to inline it here** — the credentials available had no read access to that repo.
+> Per the ticket that requested this section, that is a stop condition, not something
+> to paper over by reconstructing the task from the `jxc_rails` gem's public API. Get
+> read access to `costco-checker` (or have someone with it paste the file) and inline
+> it here as a fenced code block, with the app-specific lines (the target app name,
+> and wherever it derives `app_name` for `ClientVersion.new`) marked, before this
+> section is considered done. See the ticket for the exact shape expected
+> (`hotwire_native:generate_ios_path_config`, `MARKETING_VERSION` /
+> `CURRENT_PROJECT_VERSION` from `ios/project.yml`,
+> `JxcRails::HotwireNative::ClientVersion.new(app_name:, version:, build:)`, rendered
+> via `ApplicationController.renderer`, written to
+> `config/hotwire_native/path_configuration.json`).
+>
+> **Cross-reference:** even once inlined, the version this task builds is currently a
+> no-op on output — see the `CURRENT_PROJECT_VERSION` correction in
+> [§2.1](#21-iosprojectyml-convention--two-open--one-corrected): the rake task reads
+> it into a `ClientVersion`, but the jbuilder template never emits it, so the rendered
+> `path_configuration.json` carries no version information today.
+
 **[CORRECTED] The bundled copy must be a symlink, and you must verify it resolves.**
 `ios/<App>/path-configuration.json` is a symlink to
 `../../config/hotwire_native/path_configuration.json` in three of the four apps
