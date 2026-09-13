@@ -106,9 +106,63 @@ json.rules do
 end
 ```
 
-Add `lib/tasks/hotwire_native.rake` to render it to disk (copy from
-`costco-checker/lib/tasks/hotwire_native.rake` and change the target name), and a
-Makefile target:
+Add `lib/tasks/hotwire_native.rake` to render it to disk. Reference version, measured
+from `costco-checker/lib/tasks/hotwire_native.rake` at `origin/main` (`40079eccc2`) —
+the two app-specific lines are marked:
+
+```ruby
+namespace :hotwire_native do
+  desc "Render path_configuration.json.jbuilder to config/hotwire_native/path_configuration.json for the iOS bundle"
+  task generate_ios_path_config: :environment do
+    require "yaml"
+    require "json"
+    project_yml = YAML.load_file(Rails.root.join("ios/project.yml"))
+    base = project_yml.dig("targets", "CostcoChecker", "settings", "base") || {}  # app-specific — Xcode target name
+    version = base.fetch("MARKETING_VERSION")
+    build = base.fetch("CURRENT_PROJECT_VERSION").to_s
+    client = JxcRails::HotwireNative::ClientVersion.new(
+      app_name: "CostcoChecker",  # app-specific — same target name as the dig key above
+      version: version,
+      build: build
+    )
+    body = ApplicationController.renderer.render(
+      template: "hotwire_native/path_configuration",
+      formats: [ :json ],
+      assigns: {
+        "hotwire_client" => client,
+        "hotwire_force_upgrade" => false
+      }
+    )
+    output = Rails.root.join("config/hotwire_native/path_configuration.json")
+    FileUtils.mkdir_p(output.dirname)
+    File.write(output, JSON.pretty_generate(JSON.parse(body)) + "\n")
+    puts "Wrote #{output.relative_path_from(Rails.root)} (version #{version}, build #{build})"
+  end
+end
+```
+
+Field mapping, so nothing here needs to be reverse-engineered from the source:
+
+- `project_yml.dig("targets", "CostcoChecker", "settings", "base")` — the key is the
+  Xcode target name in `ios/project.yml`. Replace `"CostcoChecker"` with your target
+  name.
+- `version` ← `MARKETING_VERSION`, `build` ← `CURRENT_PROJECT_VERSION` (stringified),
+  both from that same target's `base` settings.
+- `ClientVersion.new(app_name: "CostcoChecker", …)` — use the same target name as the
+  `dig` key above.
+- `app_name` is informational only: `force_upgrade_via_min_version?` (in
+  `jxc_rails/lib/jxc_rails/hotwire_native/force_upgrade.rb`) compares
+  `client.below?(min_app_version)` and never reads `app_name`; `ClientVersion#app_name`
+  is only used by `to_s`. Don't agonise over what to name it.
+- The rendered template is `hotwire_native/path_configuration` (json), assigned
+  `hotwire_client` and `hotwire_force_upgrade: false`; output goes to
+  `config/hotwire_native/path_configuration.json`.
+
+(The jbuilder template above never actually emits `version` or `build` — see the
+`CURRENT_PROJECT_VERSION` note in [§2.1](#21-iosprojectyml--convention--two-open--one-corrected):
+the version-aware render is currently a no-op on output.)
+
+Add a Makefile target:
 
 ```make
 ios-path-config: ## Render bundled path-configuration.json for iOS from the jbuilder template
