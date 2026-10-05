@@ -49,8 +49,12 @@ module JxcRails
                                ":rack_test? Browser viewports need a real browser."
         end
 
+        # A layout override left by an earlier apply (or anything else) beats the window,
+        # so a plain resize_to would silently not take. Hand the width back to the
+        # window first; the CDP override below is then a fallback, never the default.
+        clear_layout_viewport(page)
         window.resize_to(target.width, target.height)
-        cdp_error = emulate_layout_viewport(page, target)
+        cdp_error = emulate_layout_viewport(page, target) if resize_fell_short?(page, target)
         drift = viewport_drift(expected: target, actual_width: measured_width(page))
         # Only when the viewport ALSO failed: a swallowed CDP error is not itself a
         # problem (plenty of drivers have no CDP and resize_to is enough), but if
@@ -125,6 +129,13 @@ module JxcRails
       # second way to SET the width, not a reason to trust it — apply_viewport!'s
       # innerWidth read still decides. Non-Chromium drivers skip it.
       #
+      # It is applied ONLY when resize_to fell short (+resize_fell_short?+). The
+      # override is sticky: it beats every later resize_to until cleared, so
+      # applying it unconditionally (0.3.3/0.3.4) broke any spec that drove a
+      # named viewport and then resized itself (desktop 1280, then
+      # resize_to(1440) stayed at 1280 — 33 gigq system specs, on Linux too).
+      # Where resize_to alone works — all of Linux CI — no override is ever set.
+      #
       # +respond_to?+ proves the method EXISTS, not that the session ACCEPTS the
       # command: a remote grid without a CDP endpoint answers execute_cdp and
       # then fails. So the call is rescued and a failed override is simply not
@@ -155,6 +166,26 @@ module JxcRails
           # makes "CDP is unreachable" invisible to whoever debugs the failure.
           "#{e.class}: #{e.message}"
         end
+      end
+
+      # True when resize_to left the rendered width outside the scrollbar tolerance
+      # of the target. An unmeasurable session (nil width) counts as "took": there
+      # is nothing to correct and the drift check treats it the same way.
+      def resize_fell_short?(page, target)
+        !viewport_drift(expected: target, actual_width: measured_width(page)).nil?
+      end
+
+      # Drop a stale Emulation.setDeviceMetricsOverride so the next resize_to is
+      # measured against the real window. Best effort for the same reason as the set:
+      # a driver that cannot do CDP has no override to clear, and apply_viewport!'s
+      # innerWidth read decides either way.
+      def clear_layout_viewport(page)
+        browser = page.driver.browser
+        return unless browser.respond_to?(:execute_cdp)
+
+        browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+      rescue StandardError
+        nil
       end
 
       # The rendered viewport width — what media queries actually see.

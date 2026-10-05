@@ -123,6 +123,30 @@ RSpec.describe JxcRails::SystemSpecs do
         .to raise_error(JxcRails::SystemSpecs::ViewportError, /viewport did not take.*innerWidth=1257/m)
     end
 
+    # Where resize_to alone works (all of Linux CI) the override must never be set:
+    # it is sticky, so setting it needlessly breaks any later raw resize_to. 0.3.3/0.3.4
+    # set it unconditionally; gigq's artist_button_scale_spec (desktop 1280, then
+    # resize_to(1440)) stayed at 1280.
+    context "when resize_to lands exactly (no window floor)" do
+      it "sets no layout override" do
+        page = FakeCapybara::CdpBrowserSession.new
+
+        described_class.apply_viewport!(page, :phone_new)
+
+        expect(page.cdp_calls.map(&:first)).to eq(["Emulation.clearDeviceMetricsOverride"])
+        expect(described_class.applied_viewport.width).to eq(402)
+      end
+
+      it "leaves a later plain resize_to free to take (desktop, then 1440)" do
+        page = FakeCapybara::CdpBrowserSession.new
+
+        described_class.apply_viewport!(page, :desktop)
+        page.window.resize_to(1440, 900)
+
+        expect(page.evaluate_script("window.innerWidth")).to eq(1440)
+      end
+    end
+
     context "when the OS window has a width floor (macOS headless Chrome won't go below 500px)" do
       it "sets the layout viewport over CDP, keeping resize_to, and verifies it took" do
         page = FakeCapybara::CdpBrowserSession.new(min_window_width: 500)
@@ -130,9 +154,33 @@ RSpec.describe JxcRails::SystemSpecs do
         described_class.apply_viewport!(page, :phone_new)
 
         expect(page.resizes).to eq([[402, 874]])
-        expect(page.cdp_calls).to eq([["Emulation.setDeviceMetricsOverride",
+        expect(page.cdp_calls).to eq([["Emulation.clearDeviceMetricsOverride", {}],
+                                      ["Emulation.setDeviceMetricsOverride",
                                        { width: 402, height: 874, deviceScaleFactor: 0, mobile: false }]])
         expect(described_class.applied_viewport.width).to eq(402)
+      end
+
+      it "clears a stale override BEFORE resizing, then overrides after (so the resize is measured)" do
+        page = FakeCapybara::CdpBrowserSession.new(min_window_width: 500)
+
+        described_class.apply_viewport!(page, :phone_new)
+
+        expect(page.events).to eq([[:cdp, "Emulation.clearDeviceMetricsOverride"],
+                                   [:resize, 402, 874],
+                                   [:cdp, "Emulation.setDeviceMetricsOverride"]])
+      end
+
+      # The override is sticky. Left over from a floor-clamped phone, it would pin
+      # the next viewport at 402 and a plain resize_to would not take.
+      it "does not let an earlier floor-clamped phone's override pin a later viewport" do
+        page = FakeCapybara::CdpBrowserSession.new(min_window_width: 500)
+        described_class.apply_viewport!(page, :phone_new)
+        page.cdp_calls.clear
+
+        described_class.apply_viewport!(page, :desktop)
+
+        expect(page.reported_width).to eq(1280)
+        expect(page.cdp_calls.map(&:first)).to eq(["Emulation.clearDeviceMetricsOverride"])
       end
 
       it "still raises when the driver has no CDP to fall back on" do
