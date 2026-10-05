@@ -141,6 +141,18 @@ real measured width, the same as before CDP existed. Without the rescue, a drive
 that cannot do CDP would start failing viewports that `resize_to` alone already
 handled.
 
+**The CDP override is a fallback, not the default (v0.3.5).** It is sticky: it
+beats every later `resize_to` until cleared. v0.3.3/0.3.4 set it on *every*
+`apply_viewport!`, so a spec that drove a named viewport and then resized itself
+(`drive_headless_chrome!(viewport: :desktop)`, then `resize_to(1440, 900)`) stayed
+at 1280 — on Linux too. Now `apply_viewport!` clears any stale override, calls
+`resize_to`, and sets the override only if the measured width is still off. Where
+`resize_to` alone works (all of Linux CI) no override is ever set.
+
+Known limit (macOS only): after a *floor-clamped* phone viewport (<500px), a raw
+`resize_to` in the spec is still pinned by the override that phone needed. Go back
+through `apply_viewport!`/`use_viewport`, which clears it first.
+
 Note what the override does **not** do: `mobile: false` means no touch emulation,
 no device-pixel-ratio change and no mobile user-agent. It sets the layout viewport
 so media queries see the width you asked for. That is the right default for

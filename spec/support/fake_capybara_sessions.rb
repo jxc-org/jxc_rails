@@ -18,7 +18,13 @@ module FakeCapybara
 
     def resize_to(width, height)
       @resizes << [width, height]
-      @session.reported_width = [width, @session.min_window_width].max unless @session.ignore_resize
+      @session.events << [:resize, width, height]
+      @session.window_width = [width, @session.min_window_width].max
+      # A CDP layout override beats the window (it is why a stale one is a bug):
+      # resize_to updates the window but innerWidth keeps reporting the override.
+      return if @session.ignore_resize || @session.layout_override
+
+      @session.reported_width = @session.window_width
     end
   end
 
@@ -26,10 +32,11 @@ module FakeCapybara
   # resolves, and evaluate_script answers. +min_window_width+ simulates an OS
   # window floor (macOS headless Chrome: 500px) — resize_to below it clamps.
   class BrowserSession
-    attr_accessor :reported_width, :ignore_resize
-    attr_reader :min_window_width, :window
+    attr_accessor :reported_width, :ignore_resize, :layout_override, :window_width
+    attr_reader :min_window_width, :window, :events
 
     def initialize(reported_width: nil, ignore_resize: false, min_window_width: 0)
+      @events           = []
       @reported_width   = reported_width
       @ignore_resize    = ignore_resize
       @min_window_width = min_window_width
@@ -61,7 +68,9 @@ module FakeCapybara
 
   # A Chromium session: also answers execute_cdp. Emulation.setDeviceMetricsOverride
   # sets the layout viewport directly, so it is not subject to the window floor —
-  # unless +ignore_cdp+, which simulates the override silently not taking.
+  # unless +ignore_cdp+, which simulates the override silently not taking. Like
+  # the real thing the override is sticky until Emulation.clearDeviceMetricsOverride:
+  # clearing hands innerWidth back to the window.
   class CdpBrowserSession < BrowserSession
     # Raised by +raise_cdp+. Stands in for the driver-level errors a real
     # Selenium session throws when it answers execute_cdp but the command does
@@ -80,9 +89,19 @@ module FakeCapybara
 
     def execute_cdp(cmd, **params)
       @cdp_calls << [cmd, params]
+      @events << [:cdp, cmd]
       raise CdpUnavailable, "no CDP endpoint" if @raise_cdp
 
-      self.reported_width = params[:width] if cmd == "Emulation.setDeviceMetricsOverride" && !@ignore_cdp
+      case cmd
+      when "Emulation.setDeviceMetricsOverride"
+        unless @ignore_cdp
+          self.layout_override = params[:width]
+          self.reported_width = params[:width]
+        end
+      when "Emulation.clearDeviceMetricsOverride"
+        self.layout_override = nil
+        self.reported_width = window_width if window_width
+      end
       {}
     end
   end
