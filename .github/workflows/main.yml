@@ -9,7 +9,11 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ vars.CI_RUNNER || 'homeserver-linux' }}
+    # GitHub-hosted, literal, on purpose (HOMES-221): jxc_rails is public, and
+    # self-hosted runners are private-repos-only. A fork PR must never land on
+    # a home-LAN runner, so this job does not read CI_RUNNER. Hosted minutes
+    # are free for public repos.
+    runs-on: ubuntu-latest
     name: Ruby ${{ matrix.ruby }}
     strategy:
       matrix:
