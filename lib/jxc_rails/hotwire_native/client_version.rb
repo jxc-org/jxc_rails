@@ -35,8 +35,11 @@ module JxcRails
         Edg CriOS FxiOS EdgiOS OPR Opera Mobile
       ].push("Turbo Native iOS", "Hotwire Native iOS").freeze
 
+      # The forked hotwire-native-ios UserAgent.build always appends one of these.
+      UA_MARKER = /Hotwire Native|Turbo Native/
+
       def self.parse_user_agent(ua)
-        return nil if ua.blank?
+        return nil unless ua.to_s.match?(UA_MARKER)
 
         # Prefer a token with a (build N) suffix; otherwise the first non-browser token.
         pattern = %r{(?<name>[A-Za-z][\w.-]*)/(?<version>\d+(?:\.\d+){0,3})(?:\s*\(build\s+(?<build>\d+)\))?}
