@@ -13,15 +13,15 @@ jobs:
     # self-hosted runners are private-repos-only. A fork PR must never land on
     # a home-LAN runner, so this job does not read CI_RUNNER. Hosted minutes
     # are free for public repos.
-    # Pinned to ubuntu-24.04, not ubuntu-latest (2026-11-06): ubuntu-latest moved
-    # to 26.04, and ruby-builder ships no 3.4.8 asset for it ("Unavailable
-    # version 3.4.8"). Revisit with the Ruby standard bump (GONK-78).
-    runs-on: ubuntu-24.04
+    # Pinned to an explicit image, never ubuntu-latest (HOMES-237): a floating
+    # label moving to 26.04 under us was half of what broke CI. ruby-builder
+    # ships a 3.4.12 asset for 26.04 (it had none for 3.4.8).
+    runs-on: ubuntu-26.04
     name: Ruby ${{ matrix.ruby }}
     strategy:
       matrix:
         ruby:
-          - '3.4.8'
+          - '3.4.12'
 
     steps:
       - uses: actions/checkout@v6
