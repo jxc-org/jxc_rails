@@ -72,7 +72,7 @@ module JxcRails
       # runs, so reading it here is order-independent. The +|| :mini_magick+
       # fallback mirrors ActiveStorage's own resolution for an unconfigured app.
       def configured_variant_processor(app: rails_application)
-        return activestorage_default_processor unless app
+        return activestorage_default_processor unless app&.config.respond_to?(:active_storage)
 
         app.config.active_storage.variant_processor || activestorage_default_processor
       end
