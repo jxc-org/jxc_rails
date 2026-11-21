@@ -98,6 +98,22 @@ RSpec.describe JxcRails::VariantProcessorCheck do
     end
   end
 
+  describe ".run! without Active Storage" do
+    # An app that never loaded Active Storage: config has no #active_storage.
+    let(:app) { Struct.new(:config).new(Object.new) }
+
+    it "falls back to :mini_magick when the config has no active_storage" do
+      expect(described_class.configured_variant_processor(app: app)).to eq(:mini_magick)
+    end
+
+    it "no-ops without raising or logging" do
+      logger = instance_double(Logger)
+      allow(described_class).to receive(:rails_application).and_return(app)
+
+      expect { described_class.run!(env: "production", logger: logger) }.not_to raise_error
+    end
+  end
+
   describe ".gem_present?" do
     it "is true for a gem that is actually installed" do
       expect(described_class.gem_present?("rspec")).to be(true)
