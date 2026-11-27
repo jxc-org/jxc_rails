@@ -53,8 +53,18 @@ module JxcRails
       end
     end
 
+    # When config.active_storage.service is :r2, fail boot if aws-sdk-s3 or any
+    # R2_* env var is missing. See JxcRails::R2Storage.
+    initializer "jxc_rails.r2_storage_check" do |app|
+      app.config.after_initialize do
+        require "jxc_rails/r2_storage"
+        JxcRails::R2Storage.run!
+      end
+    end
+
     rake_tasks do
       load File.expand_path("tasks/variant_processor.rake", __dir__)
+      load File.expand_path("tasks/storage.rake", __dir__)
     end
   end
 end
