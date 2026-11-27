@@ -10,13 +10,14 @@ module JxcRails
       extend ActiveSupport::Concern
 
       class_methods do
-        # Upsert by token: a token already owned by someone else moves to `owner`.
+        # Upsert by token: a token already owned by someone else moves to `owner`,
+        # dropping the previous owner's device name unless a new one is passed.
         # ponytail: find-then-save, so two simultaneous first registrations of one
         # token can make two rows; add a unique index on token + rescue RecordNotUnique to close it.
         def register(owner:, token:, platform: "apple", name: nil)
           device = find_or_initialize_by(token: token, platform: platform)
+          device.name = name if name || device.owner != owner
           device.owner = owner
-          device.name = name if name
           device.save!
           device
         end

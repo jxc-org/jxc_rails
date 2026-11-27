@@ -70,6 +70,18 @@ RSpec.describe JxcRails::Push do
         expect(ApplicationPushDevice.where(token: "tok-1").map(&:owner)).to eq([bob])
       end
 
+      it "drops the previous owner's device name when the token moves without a name" do
+        ApplicationPushDevice.register(owner: alice, token: "tok-1", name: "Alice's iPhone")
+
+        expect(ApplicationPushDevice.register(owner: bob, token: "tok-1").name).to be_nil
+      end
+
+      it "keeps the name when the same owner re-registers without one" do
+        ApplicationPushDevice.register(owner: alice, token: "tok-1", name: "iPhone")
+
+        expect(ApplicationPushDevice.register(owner: alice, token: "tok-1").reload.name).to eq("iPhone")
+      end
+
       it "is idempotent for the same owner" do
         2.times { ApplicationPushDevice.register(owner: alice, token: "tok-1") }
         expect(ApplicationPushDevice.count).to eq(1)
@@ -135,6 +147,22 @@ RSpec.describe JxcRails::Push do
 
           expect { device.push(notification) }.not_to raise_error
           expect(log.string.lines.size).to eq(1)
+        end
+
+        it "skips when push.yml has no block for the platform" do
+          allow(ActionPushNative).to receive(:config).and_return({ google: {} })
+
+          expect { device.push(notification) }.not_to raise_error
+          expect(log.string.lines.size).to eq(1)
+        end
+      end
+
+      context "with a malformed config/push.yml" do
+        it "raises instead of reporting push as not configured" do
+          allow(ActionPushNative).to receive(:config) { YAML.load("apple: [key_id: KEY") }
+
+          expect { device.push(notification) }.to raise_error(Psych::SyntaxError)
+          expect(log.string).not_to include("not configured")
         end
       end
     end

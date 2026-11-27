@@ -17,11 +17,18 @@ module JxcRails
       "google" => %i[encryption_key project_id]
     }.freeze
 
+    # action_push_native's RuntimeError messages for config that is absent, not broken.
+    ABSENT_CONFIG = %r{config/push\.yml not found|platform is not configured}
+
     class << self
+      # False only when credentials are absent; a malformed push.yml (or any other error) raises.
       def configured?(platform, notification)
         config = ActionPushNative.config_for(platform, notification)
         REQUIRED_CONFIG.fetch(platform.to_s, []).all? { |key| config[key].present? }
-      rescue StandardError # no config/push.yml, or the platform has no block
+      rescue RuntimeError => e
+        # ponytail: matches action_push_native 0.3.x wording; if it changes, absent config raises (loud, not silent).
+        raise unless e.instance_of?(RuntimeError) && e.message.match?(ABSENT_CONFIG)
+
         false
       end
 

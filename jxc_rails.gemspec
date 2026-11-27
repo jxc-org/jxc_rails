@@ -28,6 +28,6 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "action_push_native", "~> 0.3.1"
-  spec.add_dependency "activesupport", ">= 7.1"
-  spec.add_dependency "railties", ">= 7.1"
+  spec.add_dependency "activesupport", ">= 8.0"
+  spec.add_dependency "railties", ">= 8.0" # action_push_native needs Rails 8
 end

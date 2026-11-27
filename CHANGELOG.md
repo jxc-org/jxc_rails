@@ -2,12 +2,16 @@
 
 ## 0.4.0
 
+**Requires Rails 8.0 or later** (`railties`/`activesupport >= 8.0`): `action_push_native` needs Rails 8, so apps
+on Rails 7.x must stay on 0.3.x.
+
 ### Added
 - `JxcRails::Push`: a thin layer over Rails' `action_push_native` (direct APNs). `Model` concern for the app's
   `ApplicationPushDevice` (`register` upserts by token and moves it to the new owner; `unregister` is the sign-out
   hook), `ControllerConcern` for a devices controller (`create`, and `destroy` of the caller's own device only).
-  Sends are skipped with one log line, never raising, while APNs credentials are not configured. Payloads and tokens
-  are never logged. An APNs 410 / `BadDeviceToken` destroys the device (action_push_native's own hook).
+  Sends are skipped with one log line while APNs credentials are not configured (no `config/push.yml`, no platform
+  block, or blank keys); a malformed `config/push.yml` still raises. Payloads and
+  tokens are never logged. An APNs 410 / `BadDeviceToken` destroys the device (action_push_native's own hook).
   Adds the `action_push_native ~> 0.3.1` dependency.
 - `JxcRails::TimeZone` (#38): per-user IANA time zones (`Model`, `ControllerConcern`, `jxc_time_zone_capture_tag`,
   `TimeZone.use_for`).
