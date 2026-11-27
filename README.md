@@ -8,6 +8,7 @@ Shared Rails conventions for jxc-org applications (birthdaze, gigq, lumberlog, a
 - **`JxcRails::PersistentLogin`** — Devise `remember_me` auto-applied for Hotwire Native clients so mobile users aren't logged out after two weeks.
 - **`JxcRails::ShortCode`** — `has_short_code` DSL for nanoid-style public identifiers with configurable alphabets.
 - **`JxcRails::SystemSpecs`** — makes browser specs tell the truth in CI: a missing browser **raises instead of skipping**, and viewports are named, applied with `resize_to`, and verified. See [Browser specs that don't lie](#browser-specs-that-dont-lie).
+- **`JxcRails::Push`** — push notifications over `action_push_native` (direct APNs): `Model` concern for `ApplicationPushDevice` (`register` upserts by token, `unregister` for sign-out), `ControllerConcern` for a devices controller. Skips sends with one log line while APNs credentials are unset. See [Push notifications](#push-notifications).
 - **`JxcRails::R2Storage`** — Cloudflare R2 as the standard Active Storage backend: an `r2` storage.yml block, a boot check, and `jxc_rails:storage:{install,check}` tasks. See [Storing files in R2](#storing-files-in-r2).
 - **`JxcRails::TimeZone`** — per-user IANA time zones: `Model` concern (validation + `effective_time_zone`), `ControllerConcern` (captures the `jxc_tz` cookie into a blank zone, never overwrites; wraps requests in `Time.use_zone`), `jxc_time_zone_capture_tag` view helper (inline script, no bundle), and `JxcRails::TimeZone.use_for(user) { ... }` for jobs/mailers. Default zone `c.time_zone.default` (`America/New_York`).
 - **`JxcRails::VariantProcessorCheck`** — boot-time guard that fails fast when a dependency bump drops the gem backing the configured ActiveStorage variant processor (e.g. `image_processing` 2.x dropping `ruby-vips`). Wired automatically by the Railtie; runs in `after_initialize` (incl. `assets:precompile`).
@@ -84,6 +85,29 @@ puts/gets/deletes a small object under `_jxc_rails_probe/`, then prints `PASS` o
 **Buckets and tokens.** Buckets are created in homeserver-infra
 `terraform/cloudflare/r2.tf`. Per-bucket API tokens are minted by Max in the
 Cloudflare dashboard: one token per bucket, never shared between apps.
+
+## Push notifications
+
+Run `bin/rails action_push_native:install:migrations db:migrate` and the gem's install generator (it creates
+`ApplicationPushDevice` and `config/push.yml`), then:
+
+```ruby
+class ApplicationPushDevice < ActionPushNative::Device
+  include JxcRails::Push::Model            # owner is the user
+end
+
+class DevicesController < ApplicationController   # POST token=…, DELETE /devices/:id
+  include JxcRails::Push::ControllerConcern
+end
+# routes: resources :devices, only: %i[create destroy]
+
+# on sign-out, with the token or device id the client sent for this session:
+ApplicationPushDevice.unregister(owner: user, token: token)
+```
+
+An APNs 410 or `BadDeviceToken` destroys the device (action_push_native does this itself). While `config/push.yml`
+has no APNs key, `device.push` logs one line and returns, so an app can deploy before the key exists. The token and
+payload are never logged.
 
 ## Browser specs that don't lie
 

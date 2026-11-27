@@ -14,8 +14,9 @@ module JxcRails
         end
       end
 
+      # An invalid stored id (bad data from before validation, a tzdata change) falls back too.
       def effective_time_zone
-        time_zone.presence || JxcRails.config.time_zone.default
+        JxcRails::TimeZone.valid?(time_zone) ? time_zone : JxcRails.config.time_zone.default
       end
     end
   end

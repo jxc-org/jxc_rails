@@ -1,13 +1,11 @@
 # frozen_string_literal: true
 
 require "spec_helper"
-require "active_record"
+require "support/sqlite_memory"
 require "action_controller"
 require "action_view"
 require "active_support/testing/time_helpers"
 
-ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: ":memory:")
-ActiveRecord::Schema.verbose = false
 ActiveRecord::Schema.define { create_table(:tz_users) { |t| t.string :time_zone } }
 
 class TzUser < ActiveRecord::Base
@@ -44,6 +42,10 @@ RSpec.describe JxcRails::TimeZone do
       expect(TzUser.new(time_zone: nil)).to be_valid
     end
 
+    it "falls back to the default when the stored zone is not a valid IANA id" do
+      expect(TzUser.new(time_zone: "Mars/Olympus").effective_time_zone).to eq("America/New_York")
+    end
+
     it "returns the stored zone, else the configured default" do
       expect(TzUser.new(time_zone: "Pacific/Honolulu").effective_time_zone).to eq("Pacific/Honolulu")
       expect(TzUser.new.effective_time_zone).to eq("America/New_York")
@@ -76,6 +78,12 @@ RSpec.describe JxcRails::TimeZone do
       travel_to(ny(2026, 3, 11, 1, 30)) do
         expect(date_for(TzUser.new)).to eq(Date.new(2026, 3, 11))
         expect(date_for(nil)).to eq(Date.new(2026, 3, 11))
+      end
+    end
+
+    it "falls back to the default for an invalid stored zone instead of raising" do
+      travel_to(ny(2026, 3, 11, 1, 30)) do
+        expect(date_for(TzUser.new(time_zone: "Mars/Olympus"))).to eq(Date.new(2026, 3, 11))
       end
     end
 
@@ -124,6 +132,14 @@ RSpec.describe JxcRails::TimeZone do
       end
     end
 
+    it "runs the action in the default zone when the stored zone is invalid" do
+      user = TzUser.create!
+      user.update_column(:time_zone, "Mars/Olympus")
+      travel_to(ny(2026, 3, 11, 1, 30)) do
+        expect(get(user)[2].body).to eq("2026-03-11")
+      end
+    end
+
     it "uses a zone captured from the cookie in the same request" do
       user = TzUser.create!
       travel_to(ny(2026, 3, 11, 1, 30)) do
@@ -136,17 +152,25 @@ RSpec.describe JxcRails::TimeZone do
     let(:view) do
       Class.new do
         include ActionView::Helpers::TagHelper
+        include ActionView::Helpers::JavaScriptHelper
         include JxcRails::TimeZone::ViewHelper
 
         attr_accessor :output_buffer, :current_user
+
+        def content_security_policy_nonce = "n0nce"
       end.new
     end
 
     it "renders the capture script while the zone is nil" do
       view.current_user = TzUser.new
       html = view.jxc_time_zone_capture_tag
-      expect(html).to start_with("<script>")
+      expect(html).to start_with("<script")
       expect(html).to include("jxc_tz", "Intl.DateTimeFormat().resolvedOptions().timeZone")
+    end
+
+    it "carries the CSP nonce" do
+      view.current_user = TzUser.new
+      expect(view.jxc_time_zone_capture_tag).to include('nonce="n0nce"')
     end
 
     it "renders an empty string when a zone is stored" do
