@@ -38,6 +38,13 @@ module JxcRails
       end
     end
 
+    initializer "jxc_rails.time_zone.view_helper" do
+      ActiveSupport.on_load(:action_view) do
+        require "jxc_rails/time_zone/view_helper"
+        include JxcRails::TimeZone::ViewHelper
+      end
+    end
+
     # Guard against a dependency bump that drops the gem backing the configured
     # ActiveStorage variant processor (e.g. image_processing 2.x dropping
     # ruby-vips). Runs in after_initialize, but reads the processor from

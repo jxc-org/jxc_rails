@@ -2,13 +2,14 @@
 
 module JxcRails
   class Configuration
-    attr_reader :hotwire_native, :persistent_login, :short_code, :system_specs, :variant_processor_check
+    attr_reader :hotwire_native, :persistent_login, :short_code, :system_specs, :time_zone, :variant_processor_check
 
     def initialize
       @hotwire_native          = HotwireNativeConfig.new
       @persistent_login        = PersistentLoginConfig.new
       @short_code              = ShortCodeConfig.new
       @system_specs            = SystemSpecsConfig.new
+      @time_zone               = TimeZoneConfig.new
       @variant_processor_check = VariantProcessorCheckConfig.new
     end
 
@@ -54,6 +55,15 @@ module JxcRails
       def initialize
         @default_viewport = :desktop
         @browser_args     = %w[--no-sandbox --disable-dev-shm-usage]
+      end
+    end
+
+    class TimeZoneConfig
+      # IANA id used when a user has no stored zone.
+      attr_accessor :default
+
+      def initialize
+        @default = "America/New_York"
       end
     end
 
