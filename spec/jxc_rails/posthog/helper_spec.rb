@@ -81,7 +81,8 @@ RSpec.describe JxcRails::Posthog::Helper do
     it "escapes </script> sequences in encoded values" do
       html = view.posthog_snippet(api_key: "phc_</script>")
       expect(html).not_to include("</script></script>")
-      expect(html).to include('"phc_<\\/script>"')
+      # ActiveSupport's JSON encoder (loaded by other specs) emits \u003c; plain to_json + gsub emits <\/.
+      expect(html).to match(%r{"phc_(<\\/|\\u003c/)script(>|\\u003e)"})
     end
   end
 end

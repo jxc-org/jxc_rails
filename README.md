@@ -8,6 +8,7 @@ Shared Rails conventions for jxc-org applications (birthdaze, gigq, lumberlog, a
 - **`JxcRails::PersistentLogin`** — Devise `remember_me` auto-applied for Hotwire Native clients so mobile users aren't logged out after two weeks.
 - **`JxcRails::ShortCode`** — `has_short_code` DSL for nanoid-style public identifiers with configurable alphabets.
 - **`JxcRails::SystemSpecs`** — makes browser specs tell the truth in CI: a missing browser **raises instead of skipping**, and viewports are named, applied with `resize_to`, and verified. See [Browser specs that don't lie](#browser-specs-that-dont-lie).
+- **`JxcRails::TimeZone`** — per-user IANA time zones: `Model` concern (validation + `effective_time_zone`), `ControllerConcern` (captures the `jxc_tz` cookie into a blank zone, never overwrites; wraps requests in `Time.use_zone`), `jxc_time_zone_capture_tag` view helper (inline script, no bundle), and `JxcRails::TimeZone.use_for(user) { ... }` for jobs/mailers. Default zone `c.time_zone.default` (`America/New_York`).
 - **`JxcRails::VariantProcessorCheck`** — boot-time guard that fails fast when a dependency bump drops the gem backing the configured ActiveStorage variant processor (e.g. `image_processing` 2.x dropping `ruby-vips`). Wired automatically by the Railtie; runs in `after_initialize` (incl. `assets:precompile`).
 
 ## Installation
@@ -285,4 +286,5 @@ All modules are implemented and in use by the Rails apps.
 | `PersistentLogin` | implemented | birthdaze, costco-checker, gigq, lumberlog |
 | `ShortCode` | implemented | birthdaze, gigq |
 | `SystemSpecs` | implemented | — |
+| `TimeZone` | implemented | — |
 | `VariantProcessorCheck` | implemented | — |

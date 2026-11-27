@@ -34,6 +34,7 @@ module JxcRails
   autoload :Posthog,               "jxc_rails/posthog"
   autoload :ShortCode,             "jxc_rails/short_code"
   autoload :SystemSpecs,           "jxc_rails/system_specs"
+  autoload :TimeZone,              "jxc_rails/time_zone"
   autoload :VariantProcessorCheck, "jxc_rails/variant_processor_check"
 end
 
