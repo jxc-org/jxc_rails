@@ -32,6 +32,7 @@ module JxcRails
   autoload :HotwireNative,   "jxc_rails/hotwire_native"
   autoload :PersistentLogin,       "jxc_rails/persistent_login"
   autoload :Posthog,               "jxc_rails/posthog"
+  autoload :R2Storage,             "jxc_rails/r2_storage"
   autoload :ShortCode,             "jxc_rails/short_code"
   autoload :SystemSpecs,           "jxc_rails/system_specs"
   autoload :TimeZone,              "jxc_rails/time_zone"

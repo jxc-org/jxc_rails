@@ -8,6 +8,7 @@ Shared Rails conventions for jxc-org applications (birthdaze, gigq, lumberlog, a
 - **`JxcRails::PersistentLogin`** — Devise `remember_me` auto-applied for Hotwire Native clients so mobile users aren't logged out after two weeks.
 - **`JxcRails::ShortCode`** — `has_short_code` DSL for nanoid-style public identifiers with configurable alphabets.
 - **`JxcRails::SystemSpecs`** — makes browser specs tell the truth in CI: a missing browser **raises instead of skipping**, and viewports are named, applied with `resize_to`, and verified. See [Browser specs that don't lie](#browser-specs-that-dont-lie).
+- **`JxcRails::R2Storage`** — Cloudflare R2 as the standard Active Storage backend: an `r2` storage.yml block, a boot check, and `jxc_rails:storage:{install,check}` tasks. See [Storing files in R2](#storing-files-in-r2).
 - **`JxcRails::TimeZone`** — per-user IANA time zones: `Model` concern (validation + `effective_time_zone`), `ControllerConcern` (captures the `jxc_tz` cookie into a blank zone, never overwrites; wraps requests in `Time.use_zone`), `jxc_time_zone_capture_tag` view helper (inline script, no bundle), and `JxcRails::TimeZone.use_for(user) { ... }` for jobs/mailers. Default zone `c.time_zone.default` (`America/New_York`).
 - **`JxcRails::VariantProcessorCheck`** — boot-time guard that fails fast when a dependency bump drops the gem backing the configured ActiveStorage variant processor (e.g. `image_processing` 2.x dropping `ruby-vips`). Wired automatically by the Railtie; runs in `after_initialize` (incl. `assets:precompile`).
 
@@ -53,6 +54,36 @@ Two layers, both shipped here so every app inherits them:
    real embedded image through the configured processor. Run it in CI (where
    libvips is installed), especially on `Gemfile`/`Gemfile.lock` changes, to also
    catch native-library and API breakage.
+
+## Storing files in R2
+
+Cloudflare R2 is the standard Active Storage backend. To switch an app over:
+
+1. `bin/rails jxc_rails:storage:install`: appends an `r2:` service to
+   `config/storage.yml` and `gem "aws-sdk-s3", require: false` to the Gemfile
+   (each only if absent; safe to re-run). Then `bundle install`.
+2. Set four env vars (from the app's secrets, never committed):
+   `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`.
+3. One line in `config/environments/production.rb`:
+   `config.active_storage.service = :r2`
+
+The generated block is gigq's: endpoint `https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com`,
+`region: auto`, and `request_checksum_calculation` / `response_checksum_validation`
+set to `when_required` (R2 rejects the checksums newer `aws-sdk-s3` versions send by default).
+
+**Boot check.** When the service is `:r2`, boot raises `JxcRails::ConfigurationError`
+if `aws-sdk-s3` is not in the bundle or any of the four env vars is missing or blank.
+The error names the variable and never prints a value. When `SECRET_KEY_BASE_DUMMY`
+is set (the Rails Dockerfile's `assets:precompile`), the env-var check is skipped
+but the gem check still runs.
+
+**Operator check.** `bin/rails jxc_rails:storage:check` HEADs the bucket and
+puts/gets/deletes a small object under `_jxc_rails_probe/`, then prints `PASS` or
+`FAIL <error class>: <message>` (exits 1 on failure). It never prints credentials.
+
+**Buckets and tokens.** Buckets are created in homeserver-infra
+`terraform/cloudflare/r2.tf`. Per-bucket API tokens are minted by Max in the
+Cloudflare dashboard: one token per bucket, never shared between apps.
 
 ## Browser specs that don't lie
 
@@ -285,6 +316,7 @@ All modules are implemented and in use by the Rails apps.
 | `HotwireNative` | implemented | birthdaze, costco-checker, gigq, lumberlog |
 | `PersistentLogin` | implemented | birthdaze, costco-checker, gigq, lumberlog |
 | `ShortCode` | implemented | birthdaze, gigq |
+| `R2Storage` | implemented | — |
 | `SystemSpecs` | implemented | — |
 | `TimeZone` | implemented | — |
 | `VariantProcessorCheck` | implemented | — |
