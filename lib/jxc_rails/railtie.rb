@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "rails/railtie"
+# Loads its Engine (models, jobs) into the app; must happen before the app initializes.
+require "action_push_native"
 
 module JxcRails
   class Railtie < ::Rails::Railtie

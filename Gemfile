@@ -19,4 +19,5 @@ group :test do
   gem "rails", ">= 7.1"
   gem "selenium-webdriver", "~> 4.44"
   gem "sqlite3"
+  gem "webmock"
 end
