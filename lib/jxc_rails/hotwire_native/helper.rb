@@ -7,6 +7,7 @@ module JxcRails
     #
     #   json.settings do
     #     json.screenshots_enabled true
+    #     hotwire_theme(json) # theme + background_color, when a theme is configured
     #   end
     #
     #   json.rules do
@@ -23,6 +24,16 @@ module JxcRails
     #     rule(json, patterns: [".*"], presentation: "push")
     #   end
     module Helper
+      # Emit `theme` and `background_color` inside `json.settings`; nothing when no
+      # (valid) theme is configured. background_color is still read by shipped builds.
+      def hotwire_theme(json)
+        theme = JxcRails::HotwireNative::Theme.resolved
+        return if theme.nil?
+
+        json.theme theme
+        json.background_color theme[:light][:background]
+      end
+
       # Emit a single Hotwire Native rule — a `{ patterns: [], properties: {} }` entry.
       def rule(json, patterns:, **properties)
         json.child! do

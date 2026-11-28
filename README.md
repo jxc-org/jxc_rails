@@ -5,6 +5,7 @@ Shared Rails conventions for jxc-org applications (birthdaze, gigq, lumberlog, a
 ## Modules
 
 - **`JxcRails::HotwireNative`** — version-aware `path_configuration.json` for Hotwire Native clients, force-upgrade gating based on app version.
+- **`JxcRails::HotwireNative::Theme`** — native colors (`theme` + `background_color`) in the path-configuration settings, validated for WCAG contrast at boot. See [Native theme](#native-theme-in-the-path-configuration).
 - **`JxcRails::PersistentLogin`** — Devise `remember_me` auto-applied for Hotwire Native clients so mobile users aren't logged out after two weeks.
 - **`JxcRails::ShortCode`** — `has_short_code` DSL for nanoid-style public identifiers with configurable alphabets.
 - **`JxcRails::SystemSpecs`** — makes browser specs tell the truth in CI: a missing browser **raises instead of skipping**, and viewports are named, applied with `resize_to`, and verified. See [Browser specs that don't lie](#browser-specs-that-dont-lie).
@@ -36,6 +37,37 @@ JxcRails.configure do |c|
   c.variant_processor_check.raise_environments = %w[production]
 end
 ```
+
+## Native theme in the path configuration
+
+Serve the app's colors inside the Hotwire Native path-configuration `settings`, so iOS follows the web without an
+App Store build. Not configured = path-configuration output unchanged.
+
+```ruby
+# config/initializers/jxc_rails.rb
+JxcRails.configure do |c|
+  # Each role: a CSS custom property from :root of css_path, or a literal "#RRGGBB" (Tailwind apps).
+  c.hotwire_native.theme.light = { background: "--bg", surface: "--surface", border: "--border",
+                                   text: "--text", accent: "--coral-strong" }
+  c.hotwire_native.theme.dark  = { background: "#111111", surface: "#1C1C1C", border: "#333333",
+                                   text: "#F5F5F5", accent: "#FF8A6B" } # optional
+  c.hotwire_native.theme.css_path = "app/assets/stylesheets/application.css" # default
+end
+```
+
+```ruby
+# app/views/hotwire_native/path_configuration.json.jbuilder
+json.settings do
+  hotwire_theme(json) # adds theme: {version: 1, light:, dark:} and background_color (= light background)
+end
+```
+
+Roles: `background` window and web-view background; `surface` nav-bar fill; `border` nav-bar hairline; `text` native
+error screens (and optional nav title); `accent` tint and nav title. Every value must be `#RRGGBB` (no `rgb()`),
+and `text` on `background`/`surface` and `accent` on `surface`/`background` must reach WCAG 2.x 4.5:1 (light, and
+dark when given). The theme is resolved once at boot. A missing variable, non-hex value or contrast failure raises
+`JxcRails::ConfigurationError` in the test environment (so CI fails) and elsewhere is logged once and omitted.
+Clients should refresh it at most every 15 minutes on foreground.
 
 ## Variant processor guard
 
