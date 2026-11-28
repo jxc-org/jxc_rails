@@ -47,6 +47,12 @@ module JxcRails
       end
     end
 
+    # Resolve the native theme once at boot; a bad one raises in test, logs and
+    # is omitted elsewhere. See JxcRails::HotwireNative::Theme.
+    initializer "jxc_rails.hotwire_native.theme" do |app|
+      app.config.after_initialize { JxcRails::HotwireNative::Theme.resolve! }
+    end
+
     # Guard against a dependency bump that drops the gem backing the configured
     # ActiveStorage variant processor (e.g. image_processing 2.x dropping
     # ruby-vips). Runs in after_initialize, but reads the processor from

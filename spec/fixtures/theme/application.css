@@ -1,0 +1,17 @@
+/* fixture */
+:root {
+  --bg: #FFFFFF;
+  --surface: #f5f5f4;
+  --border: #D6D3D1;
+  --text: #1C1917;
+  --coral-strong: #B93A1C;
+  --coral-light: #E05C3A;
+  --rgb-bg: rgb(255, 255, 255);
+}
+.dark {
+  --bg: #111111;
+  --surface: #1c1c1c;
+  --border: #333333;
+  --text: #F5F5F5;
+  --coral-strong: #FF8A6B;
+}

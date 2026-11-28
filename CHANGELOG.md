@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0
+
+### Added
+- `JxcRails::HotwireNative::Theme` and the `hotwire_theme(json)` helper: the app's colors (five roles, light and
+  optional dark, from `:root` custom properties or literal `#RRGGBB`) served as `settings.theme` plus
+  `settings.background_color` in the path configuration. Resolved once at boot and checked for WCAG 2.x 4.5:1 contrast;
+  a bad theme raises `JxcRails::ConfigurationError` in test and is logged once and omitted elsewhere. Unconfigured
+  apps are unchanged. Configure with `c.hotwire_native.theme.{light,dark,css_path}`.
+
 ## 0.4.0
 
 **Requires Rails 8.0 or later** (`railties`/`activesupport >= 8.0`): `action_push_native` needs Rails 8, so apps

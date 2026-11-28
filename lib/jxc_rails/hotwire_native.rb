@@ -6,5 +6,6 @@ module JxcRails
     autoload :PathConfiguration,  "jxc_rails/hotwire_native/path_configuration"
     autoload :ForceUpgrade,       "jxc_rails/hotwire_native/force_upgrade"
     autoload :Helper,             "jxc_rails/hotwire_native/helper"
+    autoload :Theme,              "jxc_rails/hotwire_native/theme"
   end
 end

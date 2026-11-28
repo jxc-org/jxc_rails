@@ -15,12 +15,30 @@ module JxcRails
 
     class HotwireNativeConfig
       attr_accessor :app_name, :min_app_version, :force_upgrade_path, :header_prefix
+      attr_reader :theme
 
       def initialize
+        @theme              = ThemeConfig.new
         @app_name           = nil
         @min_app_version    = nil
         @force_upgrade_path = "/app/must-upgrade"
         @header_prefix      = "X-App"
+      end
+    end
+
+    # Native colors for the path configuration; see JxcRails::HotwireNative::Theme.
+    class ThemeConfig
+      # light is required (to enable the theme), dark optional: maps of
+      # background/surface/border/text/accent to a CSS custom property name
+      # ("--coral-strong") or a literal "#RRGGBB".
+      attr_accessor :light, :dark
+      # Stylesheet whose :root block defines the custom properties (relative to Rails.root).
+      attr_accessor :css_path
+
+      def initialize
+        @light    = nil
+        @dark     = nil
+        @css_path = "app/assets/stylesheets/application.css"
       end
     end
 
